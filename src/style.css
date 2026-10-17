@@ -352,6 +352,89 @@ html, body {
   font-weight: 800;
 }
 
+/* Sector Checkpoint Selector */
+.sector-select-box {
+  width: 100%;
+  background: rgba(11, 16, 36, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.sector-select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-family: var(--font-display);
+  letter-spacing: 1px;
+}
+
+.sector-header-label {
+  color: #94a3b8;
+}
+
+.sector-badge {
+  font-weight: 700;
+}
+
+.sector-pills-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.sector-pill {
+  flex: 1;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.sector-pill:hover:not(.locked) {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--color-cyan);
+  color: #ffffff;
+}
+
+.sector-pill.active {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: var(--color-cyan);
+  color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+}
+
+.sector-pill.locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.sector-pill-floor {
+  font-size: 8px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.sector-pill.active .sector-pill-floor {
+  color: var(--color-gold);
+}
+
 .menu-actions {
   display: flex;
   flex-direction: column;

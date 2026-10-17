@@ -13,9 +13,10 @@ export class TouchJoystick {
     this.thumbX = 0;
     this.thumbY = 0;
 
-    // Specs
-    this.maxRadius = 60; // Max thumb travel distance
-    this.deadZone = 8;    // Minimum movement threshold
+    // Specs (Enlarged and dynamically scaled)
+    this.maxRadius = 78; // Max thumb travel distance
+    this.thumbRadius = 32;
+    this.deadZone = 9;    // Minimum movement threshold
 
     // Output vector (-1 to 1)
     this.vector = { x: 0, y: 0 };
@@ -29,8 +30,8 @@ export class TouchJoystick {
     this.pulseTriggered = false;
 
     // Button layout bounding boxes (calculated in resize)
-    this.dashButton = { x: 0, y: 0, radius: 46 };
-    this.pulseButton = { x: 0, y: 0, radius: 36 };
+    this.dashButton = { x: 0, y: 0, radius: 72 };
+    this.pulseButton = { x: 0, y: 0, radius: 56 };
 
     // Cooldown progress (0 = ready, 1 = on full cooldown)
     this.dashCooldown = 0;
@@ -134,21 +135,31 @@ export class TouchJoystick {
   }
 
   updateLayout(virtualWidth, virtualHeight) {
-    // Dynamically calculate responsive margins & target sizes based on actual dimensions
-    const rightMargin = Math.max(95, Math.min(180, virtualWidth * 0.09));
-    const bottomMargin = Math.max(90, Math.min(145, virtualHeight * 0.16));
+    // Dynamic Responsive Scaling for Joystick and Action Buttons
+    const scaleFactor = Math.max(0.95, Math.min(1.35, virtualHeight / 720));
 
-    this.dashButton.radius = Math.max(56, Math.min(72, virtualHeight * 0.095));
+    // Enlarged Joystick Dimensions
+    this.maxRadius = Math.round(76 * scaleFactor);
+    this.thumbRadius = Math.round(33 * scaleFactor);
+    this.deadZone = Math.round(9 * scaleFactor);
+
+    // Responsive Margins (anchored to viewport edges with safe area padding)
+    const rightMargin = Math.max(115, Math.min(210, virtualWidth * 0.10));
+    const bottomMargin = Math.max(105, Math.min(160, virtualHeight * 0.17));
+
+    // Enlarged Buttons with proportional scaling
+    this.dashButton.radius = Math.round(Math.max(65, Math.min(85, virtualHeight * 0.11)));
     this.dashButton.x = virtualWidth - rightMargin;
     this.dashButton.y = virtualHeight - bottomMargin;
 
-    this.pulseButton.radius = Math.max(44, Math.min(58, virtualHeight * 0.075));
-    this.pulseButton.x = virtualWidth - rightMargin + 10;
+    this.pulseButton.radius = Math.round(Math.max(52, Math.min(70, virtualHeight * 0.088)));
+    // Ergonomic orbital placement: placed slightly left-above Dash for natural thumb sweep
+    this.pulseButton.x = this.dashButton.x - 22;
     this.pulseButton.y = this.dashButton.y - (this.dashButton.radius + this.pulseButton.radius + 24);
 
     // Default neutral base position on bottom-left if inactive
     if (!this.isActive) {
-      const leftMargin = Math.max(120, Math.min(220, virtualWidth * 0.12));
+      const leftMargin = Math.max(135, Math.min(240, virtualWidth * 0.12));
       this.baseX = leftMargin;
       this.baseY = virtualHeight - bottomMargin;
       this.thumbX = this.baseX;
@@ -238,7 +249,7 @@ export class TouchJoystick {
     // Movable thumbstick
     const thumbAlpha = this.isActive ? 0.85 : 0.45;
     ctx.beginPath();
-    ctx.arc(this.thumbX, this.thumbY, 26, 0, Math.PI * 2);
+    ctx.arc(this.thumbX, this.thumbY, this.thumbRadius || 33, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(0, 240, 255, ${thumbAlpha * 0.6})`;
     ctx.strokeStyle = `rgba(255, 255, 255, ${thumbAlpha})`;
     ctx.lineWidth = 2.5;
@@ -267,7 +278,7 @@ export class TouchJoystick {
 
     // DASH Icon / Label
     ctx.fillStyle = this.dashCooldown <= 0 ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
-    ctx.font = 'bold 14px Orbitron, sans-serif';
+    ctx.font = 'bold 16px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('DASH', db.x, db.y);
@@ -294,7 +305,7 @@ export class TouchJoystick {
       }
 
       ctx.fillStyle = this.pulseCooldown <= 0 ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
-      ctx.font = 'bold 12px Orbitron, sans-serif';
+      ctx.font = 'bold 13px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('PULSE', pb.x, pb.y);

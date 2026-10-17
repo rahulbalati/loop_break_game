@@ -182,5 +182,45 @@ export const CONFIG = {
     TEXT_ACCENT: '#00f0ff',
     SHIELD_ON: '#00ffaa',
     SHIELD_OFF: '#334155',
-  }
+  },
+
+  // Sector Milestones & Checkpoint System (Option 1)
+  SECTORS: [
+    {
+      id: 'sector_1',
+      name: 'Alpha Void',
+      startFloor: 1,
+      unlockFloorReq: 1,
+      baselineScore: 0,
+      badge: 'SECTOR 1 (FLOOR 1)',
+      desc: 'Full Simulation Run · Max Leaderboard Multiplier',
+    },
+    {
+      id: 'sector_2',
+      name: 'Neon Core',
+      startFloor: 6,
+      unlockFloorReq: 6,
+      baselineScore: 1500,
+      badge: 'SECTOR 2 (FLOOR 6)',
+      desc: 'Quick Drop · Starts at Floor 6 (+1500 PTS)',
+    },
+    {
+      id: 'sector_3',
+      name: 'Cyber Void',
+      startFloor: 11,
+      unlockFloorReq: 11,
+      baselineScore: 4000,
+      badge: 'SECTOR 3 (FLOOR 11)',
+      desc: 'High Intensity · Starts at Floor 11 (+4000 PTS)',
+    },
+    {
+      id: 'sector_4',
+      name: 'The Abyss',
+      startFloor: 16,
+      unlockFloorReq: 16,
+      baselineScore: 8000,
+      badge: 'SECTOR 4 (FLOOR 16)',
+      desc: 'Hyper Overdrive · Starts at Floor 16 (+8000 PTS)',
+    },
+  ],
 };

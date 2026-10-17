@@ -39,6 +39,8 @@ export class UIManager {
       startHighScore: document.getElementById('start-high-score'),
       startHighFloor: document.getElementById('start-high-floor'),
       startFlux: document.getElementById('start-flux-count'),
+      sectorPillsRow: document.getElementById('sector-pills-row'),
+      selectedSectorBadge: document.getElementById('selected-sector-badge'),
       desktopControlsHint: document.getElementById('desktop-controls-hint'),
       mobileControlsHint: document.getElementById('mobile-controls-hint'),
 
@@ -422,6 +424,42 @@ export class UIManager {
     this.dom.startHighScore.innerText = saveSystem.data.highScore.toLocaleString();
     this.dom.startHighFloor.innerText = saveSystem.data.highestLevel;
     this.dom.startFlux.innerText = saveSystem.data.fluxCurrency;
+    this.renderSectorOptions();
+  }
+
+  renderSectorOptions() {
+    if (!this.dom.sectorPillsRow) return;
+    this.dom.sectorPillsRow.innerHTML = '';
+
+    const currentSectorId = saveSystem.data.selectedSector || 'sector_1';
+    const activeSector = CONFIG.SECTORS.find(s => s.id === currentSectorId) || CONFIG.SECTORS[0];
+    if (this.dom.selectedSectorBadge) {
+      this.dom.selectedSectorBadge.innerText = activeSector.badge;
+    }
+
+    for (const sec of CONFIG.SECTORS) {
+      const isUnlocked = saveSystem.data.unlockedSectors.includes(sec.id);
+      const isSelected = sec.id === currentSectorId;
+
+      const pill = document.createElement('button');
+      pill.className = `sector-pill ${isSelected ? 'active' : ''} ${!isUnlocked ? 'locked' : ''}`;
+      pill.setAttribute('type', 'button');
+      pill.innerHTML = `
+        <span class="sector-pill-title">${isUnlocked ? sec.name : '🔒 LOCKED'}</span>
+        <span class="sector-pill-floor">${isUnlocked ? `FL ${sec.startFloor}` : `REACH FL ${sec.unlockFloorReq}`}</span>
+      `;
+
+      if (isUnlocked) {
+        pill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          audio.playClick();
+          saveSystem.selectSector(sec.id);
+          this.renderSectorOptions();
+        });
+      }
+
+      this.dom.sectorPillsRow.appendChild(pill);
+    }
   }
 
   showUpgradesModal() {

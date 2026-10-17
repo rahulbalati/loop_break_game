@@ -176,10 +176,21 @@ export class GameEngine {
     }
   }
 
-  startRun() {
+  startRun(forcedFloor = null) {
     this.state = 'PLAYING';
-    this.currentLevel = 1;
-    this.score = 0;
+
+    // Sector Checkpoint System: Determine starting floor & baseline score
+    const activeSectorId = saveSystem.data.selectedSector || 'sector_1';
+    const sectorConfig = CONFIG.SECTORS.find(s => s.id === activeSectorId) || CONFIG.SECTORS[0];
+
+    if (forcedFloor !== null) {
+      this.currentLevel = forcedFloor;
+      this.score = 0;
+    } else {
+      this.currentLevel = sectorConfig.startFloor;
+      this.score = sectorConfig.baselineScore;
+    }
+
     this.shardsTotalThisRun = 0;
     this.runStartTime = performance.now();
 
@@ -284,6 +295,10 @@ export class GameEngine {
 
     const levelBonus = this.currentLevel * 250;
     this.score += levelBonus;
+
+    // Check & unlock Sector Checkpoint Milestones
+    const nextFloor = this.currentLevel + 1;
+    saveSystem.unlockSectorsForLevel(nextFloor);
 
     if (this.ui) {
       this.ui.showLevelClearModal(this.currentLevel, levelBonus);

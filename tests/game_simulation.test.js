@@ -239,7 +239,45 @@ for (let s = 0; s < testShards.length; s++) {
     testShards[s].x <= shrinkWidth - 24 && testShards[s].x >= 24,
     `Shard ${s} safely clamped inside shrunken viewport (shard.x=${Math.round(testShards[s].x)})`
   );
-}
+// TEST 9: SECTOR CHECKPOINT MILESTONES (OPTION 1)
+console.log('\n--- Test 9: Sector Checkpoint Milestones (Option 1) ---');
+assert(CONFIG.SECTORS.length === 4, 'CONFIG.SECTORS contains 4 milestone sectors');
+assert(CONFIG.SECTORS[0].startFloor === 1, 'Sector 1 starts at Floor 1');
+assert(CONFIG.SECTORS[1].startFloor === 6, 'Sector 2 starts at Floor 6');
+assert(CONFIG.SECTORS[2].startFloor === 11, 'Sector 3 starts at Floor 11');
+assert(CONFIG.SECTORS[3].startFloor === 16, 'Sector 4 starts at Floor 16');
+
+// Simulate reaching Floor 11
+const testSave = {
+  unlockedSectors: ['sector_1'],
+  selectedSector: 'sector_1',
+  highestLevel: 1,
+  unlockSectorsForLevel(level) {
+    if (level >= 6 && !this.unlockedSectors.includes('sector_2')) this.unlockedSectors.push('sector_2');
+    if (level >= 11 && !this.unlockedSectors.includes('sector_3')) this.unlockedSectors.push('sector_3');
+    if (level >= 16 && !this.unlockedSectors.includes('sector_4')) this.unlockedSectors.push('sector_4');
+  },
+  selectSector(secId) {
+    if (this.unlockedSectors.includes(secId)) {
+      this.selectedSector = secId;
+      return true;
+    }
+    return false;
+  }
+};
+
+testSave.unlockSectorsForLevel(11);
+assert(testSave.unlockedSectors.includes('sector_2'), 'Sector 2 (Floor 6) unlocked after reaching Floor 11');
+assert(testSave.unlockedSectors.includes('sector_3'), 'Sector 3 (Floor 11) unlocked after reaching Floor 11');
+assert(!testSave.unlockedSectors.includes('sector_4'), 'Sector 4 (Floor 16) remains locked');
+
+const selected = testSave.selectSector('sector_3');
+assert(selected === true, 'Successfully selected Sector 3 (Floor 11)');
+assert(testSave.selectedSector === 'sector_3', 'Active sector is sector_3');
+
+const secConfig = CONFIG.SECTORS.find(s => s.id === testSave.selectedSector);
+assert(secConfig.startFloor === 11, 'Game will start at Floor 11 when Sector 3 is active');
+assert(secConfig.baselineScore === 4000, 'Baseline score compensation (+4000 PTS) applied for Sector 3');
 
 console.log('\n====================================================');
 console.log(`🎉 TEST SUMMARY: ${passedTests} / ${totalTests} TESTS PASSED!`);

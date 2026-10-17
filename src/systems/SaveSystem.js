@@ -10,6 +10,8 @@ const DEFAULT_SAVE_DATA = {
   fluxCurrency: 0, // In-game currency earned from shards & level completes
   selectedSkin: 'cyan_default',
   unlockedSkins: ['cyan_default'],
+  selectedSector: 'sector_1',
+  unlockedSectors: ['sector_1'],
   upgrades: {
     phase_engine: 0,
     flux_magnet: 0,
@@ -31,6 +33,8 @@ const DEFAULT_SAVE_DATA = {
 export class SaveSystem {
   constructor() {
     this.data = this.load();
+    // Re-verify sector unlocks against recorded highestLevel
+    this.unlockSectorsForLevel(this.data.highestLevel);
   }
 
   load() {
@@ -42,6 +46,10 @@ export class SaveSystem {
       return {
         ...DEFAULT_SAVE_DATA,
         ...parsed,
+        selectedSector: parsed.selectedSector || 'sector_1',
+        unlockedSectors: Array.isArray(parsed.unlockedSectors) && parsed.unlockedSectors.length > 0
+          ? parsed.unlockedSectors
+          : ['sector_1'],
         upgrades: { ...DEFAULT_SAVE_DATA.upgrades, ...(parsed.upgrades || {}) },
         settings: { ...DEFAULT_SAVE_DATA.settings, ...(parsed.settings || {}) },
         stats: { ...DEFAULT_SAVE_DATA.stats, ...(parsed.stats || {}) },
@@ -74,6 +82,8 @@ export class SaveSystem {
     if (level > this.data.highestLevel) {
       this.data.highestLevel = level;
     }
+    this.unlockSectorsForLevel(Math.max(level, this.data.highestLevel));
+
     if (combo > (this.data.stats.bestCombo || 1)) {
       this.data.stats.bestCombo = combo;
     }
@@ -85,6 +95,35 @@ export class SaveSystem {
     }
 
     this.save();
+  }
+
+  unlockSectorsForLevel(level) {
+    let changed = false;
+    if (level >= 6 && !this.data.unlockedSectors.includes('sector_2')) {
+      this.data.unlockedSectors.push('sector_2');
+      changed = true;
+    }
+    if (level >= 11 && !this.data.unlockedSectors.includes('sector_3')) {
+      this.data.unlockedSectors.push('sector_3');
+      changed = true;
+    }
+    if (level >= 16 && !this.data.unlockedSectors.includes('sector_4')) {
+      this.data.unlockedSectors.push('sector_4');
+      changed = true;
+    }
+    if (changed) {
+      this.save();
+    }
+    return changed;
+  }
+
+  selectSector(sectorId) {
+    if (this.data.unlockedSectors.includes(sectorId)) {
+      this.data.selectedSector = sectorId;
+      this.save();
+      return true;
+    }
+    return false;
   }
 
   getUpgradeLevel(upgradeId) {
