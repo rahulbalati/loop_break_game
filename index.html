@@ -17,8 +17,8 @@
   <!-- CrazyGames SDK v3 Script Tag -->
   <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 
-  <script type="module" crossorigin src="./assets/index-wnRj4eKi.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CVW2CmNl.css">
+  <script type="module" crossorigin src="./assets/index-DhI4MZ9c.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BGftMXsB.css">
 </head>
 <body>
   <!-- Main Game Container -->
@@ -228,9 +228,12 @@
             <h2 class="modal-title">CYBER LAB</h2>
             <p class="modal-subtitle">Permanent system modifications & avatar skins</p>
           </div>
-          <div class="flux-balance-pill">
-            <span class="balance-label">AVAILABLE FLUX:</span>
-            <span id="upgrades-flux-count" class="balance-num neon-gold">0 ⚡</span>
+          <div class="header-right-actions">
+            <div class="flux-balance-pill">
+              <span class="balance-label">AVAILABLE FLUX:</span>
+              <span id="upgrades-flux-count" class="balance-num neon-gold">0 ⚡</span>
+            </div>
+            <button id="btn-close-upgrades-x" class="modal-close-btn" aria-label="Close Cyber Lab" title="Close">✕</button>
           </div>
         </div>
 
@@ -260,44 +263,51 @@
     <!-- TUTORIAL / HOW TO PLAY MODAL -->
     <div id="tutorial-modal" class="overlay-layer screen-center hidden">
       <div class="glass-panel modal-panel tutorial-dialog">
-        <div class="modal-badge neon-cyan">TACTICAL BRIEFING</div>
-        <h2 class="modal-title">HOW TO PLAY</h2>
-
-        <div class="tutorial-cards">
-          <div class="tutorial-card">
-            <div class="tut-icon-box neon-gold">✦</div>
-            <div class="tut-body">
-              <h4>1. COLLECT ENERGY SHARDS</h4>
-              <p>Navigate with the <strong>Joystick</strong> (or <strong>WASD / Arrow Keys</strong>). Collect all golden shards to unlock the emerald Exit Portal.</p>
-            </div>
+        <div class="tutorial-header">
+          <div>
+            <div class="modal-badge neon-cyan">TACTICAL BRIEFING</div>
+            <h2 class="modal-title">HOW TO PLAY</h2>
           </div>
+          <button id="btn-close-tutorial-x" class="modal-close-btn" aria-label="Close Briefing" title="Close">✕</button>
+        </div>
 
-          <div class="tutorial-card">
-            <div class="tut-icon-box neon-magenta">⧖</div>
-            <div class="tut-body">
-              <h4>2. THE SIGNATURE ECHO SYSTEM</h4>
-              <p>After a 2.4s delay, a violet <strong>Ghost</strong> repeats your exact path. <em>Touching it damages you</em>, but you can <strong>BAIT enemies</strong> into chasing your ghost while you escape!</p>
+        <div class="tutorial-content">
+          <div class="tutorial-cards">
+            <div class="tutorial-card">
+              <div class="tut-icon-box neon-gold">✦</div>
+              <div class="tut-body">
+                <h4>1. COLLECT ENERGY SHARDS</h4>
+                <p>Navigate with the <strong>Joystick</strong> (or <strong>WASD / Arrow Keys</strong>). Collect all golden shards to unlock the emerald Exit Portal.</p>
+              </div>
             </div>
-          </div>
 
-          <div class="tutorial-card">
-            <div class="tut-icon-box neon-cyan">⚡</div>
-            <div class="tut-body">
-              <h4>3. PHASE DASH</h4>
-              <p>Tap <strong>DASH</strong> (or press <strong>SPACE</strong>) for a burst of speed with <strong>invulnerability frames</strong> to slip through danger.</p>
+            <div class="tutorial-card">
+              <div class="tut-icon-box neon-magenta">⧖</div>
+              <div class="tut-body">
+                <h4>2. THE SIGNATURE ECHO SYSTEM</h4>
+                <p>After a 2.4s delay, a violet <strong>Ghost</strong> repeats your exact path. <em>Touching it damages you</em>, but you can <strong>BAIT enemies</strong> into chasing your ghost while you escape!</p>
+              </div>
             </div>
-          </div>
 
-          <div class="tutorial-card">
-            <div class="tut-icon-box neon-emerald">🌀</div>
-            <div class="tut-body">
-              <h4>4. KINETIC PULSE & ESCAPE</h4>
-              <p>Tap <strong>PULSE</strong> (or press <strong>E</strong>) to stun and push back nearby enemies with an EMP shockwave, then enter the green Vortex to advance!</p>
+            <div class="tutorial-card">
+              <div class="tut-icon-box neon-cyan">⚡</div>
+              <div class="tut-body">
+                <h4>3. PHASE DASH</h4>
+                <p>Tap <strong>DASH</strong> (or press <strong>SPACE</strong>) for a burst of speed with <strong>invulnerability frames</strong> to slip through danger.</p>
+              </div>
+            </div>
+
+            <div class="tutorial-card">
+              <div class="tut-icon-box neon-emerald">🌀</div>
+              <div class="tut-body">
+                <h4>4. KINETIC PULSE & ESCAPE</h4>
+                <p>Tap <strong>PULSE</strong> (or press <strong>E</strong>) to stun and push back nearby enemies with an EMP shockwave, then enter the green Vortex to advance!</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="modal-buttons">
+        <div class="tutorial-footer">
           <button id="btn-start-from-tutorial" class="btn btn-primary btn-glow">
             <span class="btn-text">INITIALIZE RUN</span>
             <span class="btn-glow-bar"></span>
