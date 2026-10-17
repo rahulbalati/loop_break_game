@@ -24,7 +24,10 @@ export class InputManager {
   }
 
   setGameplayActive(active) {
-    this.isGameplayActive = active;
+    this.isGameplayActive = !!active;
+    if (this.joystick) {
+      this.joystick.setEnabled(this.isGameplayActive);
+    }
   }
 
   bindKeyboard() {

@@ -460,18 +460,49 @@ html, body {
    TUTORIAL DIALOG & CARDS
    ---------------------------------------------------- */
 .tutorial-dialog {
-  max-width: 640px;
-  max-height: 85vh;
-  overflow-y: auto;
+  width: min(94vw, 640px);
+  max-height: 88vh;
+  max-height: 88dvh;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
   text-align: left;
-  padding: 26px 30px;
+}
+
+.tutorial-header {
+  padding: 16px 22px 14px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.tutorial-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 22px;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .tutorial-cards {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin: 14px 0;
+}
+
+.tutorial-footer {
+  padding: 12px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: rgba(10, 15, 35, 0.88);
+  flex-shrink: 0;
 }
 
 .tutorial-card {
@@ -732,9 +763,13 @@ html, body {
    UPGRADES & SKINS LAB MODAL
    ---------------------------------------------------- */
 .upgrades-dialog {
-  max-width: 680px;
-  max-height: 85vh;
-  overflow-y: auto;
+  width: min(94vw, 680px);
+  max-height: 88vh;
+  max-height: 88dvh;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
   text-align: left;
 }
 
@@ -742,6 +777,41 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 16px 22px 14px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.modal-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #cbd5e1;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.modal-close-btn:hover, .modal-close-btn:active {
+  background: rgba(255, 42, 95, 0.25);
+  border-color: var(--color-crimson);
+  color: #ffffff;
 }
 
 .flux-balance-pill {
@@ -752,6 +822,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .balance-label {
@@ -770,7 +841,18 @@ html, body {
   display: flex;
   gap: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 8px;
+  padding: 10px 22px 8px 22px;
+  flex-shrink: 0;
+}
+
+.tabs-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 22px;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .tab-btn {
@@ -790,6 +872,15 @@ html, body {
   background: rgba(0, 240, 255, 0.18);
   color: var(--color-cyan);
   border: 1px solid var(--border-neon);
+}
+
+.upgrades-footer {
+  padding: 12px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(10, 15, 35, 0.88);
+  flex-shrink: 0;
 }
 
 .upgrades-grid {
@@ -982,3 +1073,129 @@ html, body {
   .hud-value { font-size: 13px; }
   .hud-label { font-size: 8px; }
 }
+
+/* Mobile Landscape & Low-Height Screen Optimization */
+@media (max-height: 520px) {
+  .modal-panel {
+    padding: 12px 18px;
+    gap: 8px;
+    max-height: 94vh;
+    max-height: 94dvh;
+    overflow-y: auto;
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-title {
+    font-size: 18px;
+  }
+  .modal-subtitle {
+    display: none;
+  }
+  .upgrades-dialog, .tutorial-dialog {
+    max-height: 94vh;
+    max-height: 94dvh;
+  }
+  .upgrades-header, .tutorial-header {
+    padding: 8px 16px;
+  }
+  .header-right-actions {
+    gap: 8px;
+  }
+  .flux-balance-pill {
+    padding: 3px 10px;
+    gap: 5px;
+  }
+  .balance-label {
+    font-size: 8px;
+  }
+  .balance-num {
+    font-size: 12px;
+  }
+  .modal-close-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .tabs-nav {
+    padding: 4px 16px;
+    gap: 6px;
+  }
+  .tab-btn {
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+  .tabs-content, .tutorial-content {
+    padding: 8px 16px;
+  }
+  .upgrades-grid {
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .upgrade-card {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .upgrade-info h4 {
+    font-size: 11px;
+  }
+  .upgrade-info p {
+    font-size: 10px;
+  }
+  .btn-buy {
+    padding: 5px 10px;
+    font-size: 9px;
+  }
+  .skins-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .skin-card {
+    padding: 6px;
+    gap: 4px;
+  }
+  .skin-preview {
+    width: 36px;
+    height: 36px;
+  }
+  .skin-circle {
+    width: 14px;
+    height: 14px;
+  }
+  .upgrades-footer, .tutorial-footer {
+    padding: 8px 16px;
+  }
+  .tutorial-cards {
+    gap: 6px;
+  }
+  .tutorial-card {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .tut-icon-box {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  .tut-body h4 {
+    font-size: 10px;
+  }
+  .tut-body p {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+  .game-over-grid {
+    gap: 6px;
+    margin: 4px 0;
+  }
+  .game-over-stat {
+    padding: 4px 6px;
+  }
+  .stat-num {
+    font-size: 14px;
+  }
+  .stat-label {
+    font-size: 8px;
+  }
+}
+

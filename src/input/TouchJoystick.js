@@ -36,10 +36,18 @@ export class TouchJoystick {
     // Cooldown progress (0 = ready, 1 = on full cooldown)
     this.dashCooldown = 0;
     this.pulseCooldown = 0;
-    this.pulseUnlocked = true;
-
     this.isTouchDevice = false;
+    this.enabled = false;
     this.bindEvents();
+  }
+
+  setEnabled(val) {
+    this.enabled = !!val;
+    if (!this.enabled) {
+      this.resetJoystick();
+      this.dashTouchId = null;
+      this.pulseTouchId = null;
+    }
   }
 
   bindEvents() {
@@ -47,6 +55,17 @@ export class TouchJoystick {
 
     const onTouchStart = (e) => {
       this.isTouchDevice = true;
+
+      // Allow natural touch scrolling and clicks when interacting with open modals/overlays
+      if (e.target && e.target.closest && e.target.closest('.modal-panel, .overlay-layer:not(#hud)')) {
+        return;
+      }
+
+      // Do not intercept touches if gameplay is not actively running
+      if (!this.enabled) {
+        return;
+      }
+
       const rect = this.canvas.getBoundingClientRect();
       const scaleX = this.canvas.width / rect.width;
       const scaleY = this.canvas.height / rect.height;
@@ -91,7 +110,7 @@ export class TouchJoystick {
     };
 
     const onTouchMove = (e) => {
-      if (!this.isActive) return;
+      if (!this.enabled || !this.isActive) return;
       const rect = this.canvas.getBoundingClientRect();
       const scaleX = this.canvas.width / rect.width;
       const scaleY = this.canvas.height / rect.height;
@@ -225,8 +244,8 @@ export class TouchJoystick {
   }
 
   render(ctx) {
-    // Only render touch controls if touch has been detected
-    if (!this.isTouchDevice) return;
+    // Only render touch controls during active gameplay on touch devices
+    if (!this.isTouchDevice || !this.enabled) return;
 
     ctx.save();
 

@@ -47,6 +47,7 @@ export class UIManager {
       // Tutorial Modal Elements
       btnStartFromTutorial: document.getElementById('btn-start-from-tutorial'),
       btnCloseTutorial: document.getElementById('btn-close-tutorial'),
+      btnCloseTutorialX: document.getElementById('btn-close-tutorial-x'),
 
       // Pause Screen Elements
       btnResume: document.getElementById('btn-resume'),
@@ -74,6 +75,7 @@ export class UIManager {
       upgradesList: document.getElementById('upgrades-list'),
       skinsList: document.getElementById('skins-list'),
       btnCloseUpgrades: document.getElementById('btn-close-upgrades'),
+      btnCloseUpgradesX: document.getElementById('btn-close-upgrades-x'),
       tabOverclocks: document.getElementById('tab-overclocks'),
       tabSkins: document.getElementById('tab-skins'),
       contentOverclocks: document.getElementById('content-overclocks'),
@@ -112,6 +114,13 @@ export class UIManager {
       audio.playClick();
       this.hideTutorialModal();
     });
+
+    if (this.dom.btnCloseTutorialX) {
+      this.dom.btnCloseTutorialX.addEventListener('click', () => {
+        audio.playClick();
+        this.hideTutorialModal();
+      });
+    }
 
     // Global Auto-Fullscreen Trigger on First/Any User Interaction
     const autoFullscreenHandler = () => {
@@ -197,6 +206,14 @@ export class UIManager {
       this.dom.upgradesModal.classList.add('hidden');
       this.updateStartStats();
     });
+
+    if (this.dom.btnCloseUpgradesX) {
+      this.dom.btnCloseUpgradesX.addEventListener('click', () => {
+        audio.playClick();
+        this.dom.upgradesModal.classList.add('hidden');
+        this.updateStartStats();
+      });
+    }
 
     // Upgrades tab switching
     this.dom.tabOverclocks.addEventListener('click', () => {
@@ -327,6 +344,7 @@ export class UIManager {
   }
 
   showTutorialModal() {
+    this.game.input.setGameplayActive(false);
     this.dom.tutorialModal.classList.remove('hidden');
   }
 
@@ -463,6 +481,7 @@ export class UIManager {
   }
 
   showUpgradesModal() {
+    this.game.input.setGameplayActive(false);
     this.dom.upgradesFluxCount.innerText = saveSystem.data.fluxCurrency;
     this.renderUpgradesList();
     this.renderSkinsList();
