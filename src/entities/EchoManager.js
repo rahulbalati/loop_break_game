@@ -61,7 +61,7 @@ export class EchoManager {
     }
   }
 
-  update(dt, player, particleSystem, screenShake) {
+  update(dt, player, particleSystem, screenShake, onPlayerDied) {
     if (!this.isActive || this.history.length === 0) return;
 
     if (this.warningSoundCooldown > 0) {
@@ -113,11 +113,14 @@ export class EchoManager {
       this.warningSoundCooldown = 0.6;
     }
 
-    // Collision damage
-    if (dist < CONFIG.PLAYER.RADIUS + 12 && !player.isDashing) {
+    // Collision damage (requires visible ghost alpha >= 0.5 to prevent spawn unfairness)
+    if (dist < CONFIG.PLAYER.RADIUS + 12 && this.ghost.alpha >= 0.5 && !player.isDashing) {
       const damaged = player.takeDamage(particleSystem, screenShake);
       if (damaged) {
         particleSystem.spawnHitSparks(this.ghost.x, this.ghost.y, CONFIG.ECHO.COLOR);
+        if (player.health <= 0 && onPlayerDied) {
+          onPlayerDied();
+        }
       }
     }
   }

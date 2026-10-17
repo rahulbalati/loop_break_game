@@ -35,6 +35,25 @@ export class BaseEnemy {
     return player;
   }
 
+  // Flocking separation: nudges enemies apart so they do not overlap/stack
+  separate(allEnemies) {
+    if (!allEnemies || allEnemies.length <= 1) return;
+    for (let i = 0; i < allEnemies.length; i++) {
+      const other = allEnemies[i];
+      if (other === this) continue;
+      const dx = this.x - other.x;
+      const dy = this.y - other.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = this.radius + other.radius + 8;
+      if (dist < minDist && dist > 0.001) {
+        const overlap = (minDist - dist) / dist;
+        const pushForce = overlap * 35;
+        this.vx += (dx / dist) * pushForce;
+        this.vy += (dy / dist) * pushForce;
+      }
+    }
+  }
+
   bounceWalls(arenaWidth, arenaHeight) {
     const pad = this.radius + 12;
     if (this.x < pad) {

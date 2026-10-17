@@ -28,7 +28,6 @@ export class UIManager {
       hudCombo: document.getElementById('hud-combo'),
       hudShields: document.getElementById('hud-shields'),
       hudPauseBtn: document.getElementById('hud-pause-btn'),
-      hudFullscreenBtn: document.getElementById('hud-fullscreen-btn'),
       hudDirective: document.getElementById('hud-directive'),
       directiveTitle: document.getElementById('directive-title'),
       directiveText: document.getElementById('directive-text'),
@@ -37,7 +36,6 @@ export class UIManager {
       btnStart: document.getElementById('btn-start-game'),
       btnOpenUpgrades: document.getElementById('btn-open-upgrades'),
       btnOpenTutorial: document.getElementById('btn-open-tutorial'),
-      startFullscreenBtn: document.getElementById('start-fullscreen-btn'),
       startHighScore: document.getElementById('start-high-score'),
       startHighFloor: document.getElementById('start-high-floor'),
       startFlux: document.getElementById('start-flux-count'),
@@ -113,16 +111,12 @@ export class UIManager {
       this.hideTutorialModal();
     });
 
-    // Fullscreen buttons
-    this.dom.hudFullscreenBtn.addEventListener('click', () => {
-      audio.playClick();
-      this.toggleFullscreen();
-    });
-
-    this.dom.startFullscreenBtn.addEventListener('click', () => {
-      audio.playClick();
-      this.toggleFullscreen();
-    });
+    // Global Auto-Fullscreen Trigger on First/Any User Interaction
+    const autoFullscreenHandler = () => {
+      this.requestFullscreenAuto();
+    };
+    window.addEventListener('pointerdown', autoFullscreenHandler, { passive: true });
+    window.addEventListener('touchstart', autoFullscreenHandler, { passive: true });
 
     // Pause HUD button
     this.dom.hudPauseBtn.addEventListener('click', () => {
@@ -262,21 +256,17 @@ export class UIManager {
     });
   }
 
-  // --- FULLSCREEN LOGIC ---
+  // --- AUTOMATIC FULLSCREEN SYSTEM ---
   requestFullscreenAuto() {
-    // Only attempt auto-fullscreen if not currently in fullscreen
-    const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
-    if (!isFs) {
-      this.toggleFullscreen();
-    }
-  }
-
-  toggleFullscreen() {
-    const doc = document;
-    const el = document.documentElement;
-    const isFs = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+    const isFs = !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
 
     if (!isFs) {
+      const el = document.documentElement;
       try {
         if (el.requestFullscreen) {
           el.requestFullscreen().catch(() => {});
@@ -285,26 +275,13 @@ export class UIManager {
         } else if (el.msRequestFullscreen) {
           el.msRequestFullscreen();
         }
+      } catch (err) {}
 
-        // Lock to landscape on Android Chrome
+      try {
         if (screen.orientation && screen.orientation.lock) {
           screen.orientation.lock('landscape').catch(() => {});
         }
-      } catch (err) {
-        // Safe fallback for restricted browsers
-      }
-    } else {
-      try {
-        if (doc.exitFullscreen) {
-          doc.exitFullscreen().catch(() => {});
-        } else if (doc.webkitExitFullscreen) {
-          doc.webkitExitFullscreen();
-        } else if (doc.msExitFullscreen) {
-          doc.msExitFullscreen();
-        }
-      } catch (err) {
-        // Safe fallback
-      }
+      } catch (err) {}
     }
   }
 

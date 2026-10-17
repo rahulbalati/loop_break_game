@@ -15,9 +15,11 @@ export class AudioSynthesizer {
   init() {
     if (this.ctx) return;
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        this.ctx = new AudioCtx();
+      if (typeof window !== 'undefined') {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          this.ctx = new AudioCtx();
+        }
       }
     } catch (e) {
       console.warn('Web Audio API not supported', e);

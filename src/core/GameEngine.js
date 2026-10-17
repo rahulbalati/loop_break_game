@@ -253,11 +253,12 @@ export class GameEngine {
 
     // Record and Update Echo
     this.echo.record(this.player, dt);
-    this.echo.update(dt, this.player, this.particleSystem, this.screenShake);
+    this.echo.update(dt, this.player, this.particleSystem, this.screenShake, () => this.onPlayerDied());
     const decoy = this.echo.getDecoyTarget();
 
-    // Update Enemies
+    // Update Enemies (with mutual separation to prevent clustering)
     for (const enemy of this.enemies) {
+      enemy.separate(this.enemies);
       enemy.update(dt, this.player, decoy, this.virtualWidth, this.virtualHeight);
     }
 
