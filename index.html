@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LOOP//BREAK — Neon Cyber Arcade Game</title>
+  <meta name="description" content="LOOP//BREAK — A high-octane neon cyber arcade game where your past movements become your greatest obstacle and your ultimate weapon.">
+  <meta name="theme-color" content="#070814">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Google Fonts: Orbitron for Sci-Fi Headers & Inter for crisp readability -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <!-- CrazyGames SDK v3 Script Tag -->
+  <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <!-- Main Game Container -->
+  <div id="game-container">
+    <!-- Responsive 16:9 Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- IN-GAME HUD -->
+    <div id="hud" class="overlay-layer hidden">
+      <div class="hud-top">
+        <div class="hud-pill hud-floor-box">
+          <span class="hud-label">SIMULATION</span>
+          <span id="hud-floor" class="hud-value neon-cyan">FLOOR 1</span>
+        </div>
+
+        <div class="hud-pill hud-shards-box">
+          <span class="hud-label">ENERGY SHARDS</span>
+          <div class="shards-indicator">
+            <span class="shard-icon">✦</span>
+            <span id="hud-shards" class="hud-value neon-gold">0 / 3</span>
+          </div>
+        </div>
+
+        <div class="hud-pill hud-score-box">
+          <span class="hud-label">SCORE</span>
+          <div class="score-display">
+            <span id="hud-score" class="hud-value">0</span>
+            <span id="hud-combo" class="combo-badge neon-magenta"></span>
+          </div>
+        </div>
+
+        <div class="hud-pill hud-shields-box">
+          <span class="hud-label">SHIELDS</span>
+          <div id="hud-shields" class="shields-row">
+            <span class="shield-pip active"></span>
+            <span class="shield-pip active"></span>
+            <span class="shield-pip active"></span>
+          </div>
+        </div>
+
+        <button id="hud-pause-btn" class="hud-btn" aria-label="Pause Game">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" rx="1"/>
+            <rect x="14" y="4" width="4" height="16" rx="1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="overlay-layer screen-center">
+      <div class="glass-panel main-menu-panel">
+        <div class="logo-wrapper">
+          <h1 class="game-logo" data-text="LOOP//BREAK">LOOP<span class="logo-slash">//</span>BREAK</h1>
+          <div class="game-tagline">YOUR PAST IS YOUR PERIL. BREAK THE ECHO.</div>
+        </div>
+
+        <div class="stats-ribbon">
+          <div class="stat-pill">
+            <span class="stat-label">HIGH SCORE</span>
+            <span id="start-high-score" class="stat-num neon-cyan">0</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">MAX FLOOR</span>
+            <span id="start-high-floor" class="stat-num neon-magenta">1</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">FLUX SHARDS</span>
+            <span id="start-flux-count" class="stat-num neon-gold">0 ⚡</span>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-start-game" class="btn btn-primary btn-glow">
+            <span class="btn-text">INITIALIZE RUN</span>
+            <span class="btn-glow-bar"></span>
+          </button>
+          <button id="btn-open-upgrades" class="btn btn-secondary">
+            <span>OVERCLOCKS & SKINS</span>
+          </button>
+        </div>
+
+        <!-- Desktop Controls Hint -->
+        <div id="desktop-controls-hint" class="controls-guide">
+          <div class="control-key-item"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Move</div>
+          <div class="control-key-item"><kbd>SPACE</kbd> Dash (Invulnerable)</div>
+          <div class="control-key-item"><kbd>E</kbd> / <kbd>J</kbd> Kinetic Pulse</div>
+          <div class="control-key-item"><kbd>ESC</kbd> Pause</div>
+        </div>
+
+        <!-- Mobile Controls Hint -->
+        <div id="mobile-controls-hint" class="controls-guide hidden">
+          <div class="control-touch-item">🕹️ Left Joystick: Analog 360° Movement</div>
+          <div class="control-touch-item">⚡ Bottom-Right: Dash Burst</div>
+          <div class="control-touch-item">💥 Orbital: Kinetic Pulse Wave</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL CLEAR MODAL -->
+    <div id="level-clear-modal" class="overlay-layer screen-center hidden">
+      <div class="glass-panel modal-panel level-clear-card">
+        <div class="modal-badge neon-emerald">SYSTEM BREACHED</div>
+        <h2 id="clear-floor-num" class="modal-title">FLOOR 1 DECRYPTED</h2>
+        <div class="clear-stats">
+          <div class="clear-stat-box">
+            <span class="stat-label">CLEAR BONUS</span>
+            <span id="clear-floor-score" class="stat-num neon-gold">+250 PTS</span>
+          </div>
+        </div>
+        <button id="btn-next-level" class="btn btn-primary btn-glow">
+          <span class="btn-text">NEXT FLOOR &rarr;</span>
+          <span class="btn-glow-bar"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PAUSE MODAL -->
+    <div id="pause-modal" class="overlay-layer screen-center hidden">
+      <div class="glass-panel modal-panel">
+        <h2 class="modal-title">SIMULATION PAUSED</h2>
+        <div class="settings-group">
+          <label class="toggle-control">
+            <span>SOUND EFFECTS</span>
+            <input type="checkbox" id="toggle-sfx" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="toggle-control">
+            <span>CYBER PULSE MUSIC</span>
+            <input type="checkbox" id="toggle-bgm" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="modal-buttons">
+          <button id="btn-resume" class="btn btn-primary">RESUME</button>
+          <button id="btn-restart-pause" class="btn btn-secondary">RESTART RUN</button>
+          <button id="btn-quit-to-menu" class="btn btn-outline">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME OVER MODAL -->
+    <div id="game-over-modal" class="overlay-layer screen-center hidden">
+      <div class="glass-panel modal-panel game-over-card">
+        <div class="modal-badge neon-crimson">SIMULATION COLLAPSED</div>
+        <h2 class="modal-title game-over-title">CYCLE TERMINATED</h2>
+        
+        <div class="game-over-grid">
+          <div class="game-over-stat">
+            <span class="stat-label">FINAL SCORE</span>
+            <span id="over-score" class="stat-num neon-cyan">0</span>
+          </div>
+          <div class="game-over-stat">
+            <span class="stat-label">BEST RECORD</span>
+            <span id="over-best-score" class="stat-num neon-gold">0</span>
+          </div>
+          <div class="game-over-stat">
+            <span class="stat-label">FLOORS REACHED</span>
+            <span id="over-floor" class="stat-num neon-magenta">1</span>
+          </div>
+          <div class="game-over-stat">
+            <span class="stat-label">FLUX BANKED</span>
+            <span id="over-flux-earned" class="stat-num neon-gold">+0 ⚡</span>
+          </div>
+        </div>
+
+        <div class="modal-buttons">
+          <button id="btn-restart-over" class="btn btn-primary btn-glow">
+            <span class="btn-text">RE-INITIALIZE</span>
+            <span class="btn-glow-bar"></span>
+          </button>
+          <button id="btn-shop-over" class="btn btn-secondary">UPGRADE LAB</button>
+          <button id="btn-menu-over" class="btn btn-outline">RETURN TO HUB</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPGRADES & SKINS LAB MODAL -->
+    <div id="upgrades-modal" class="overlay-layer screen-center hidden">
+      <div class="glass-panel modal-panel upgrades-dialog">
+        <div class="upgrades-header">
+          <div>
+            <h2 class="modal-title">CYBER LAB</h2>
+            <p class="modal-subtitle">Permanent system modifications & avatar skins</p>
+          </div>
+          <div class="flux-balance-pill">
+            <span class="balance-label">AVAILABLE FLUX:</span>
+            <span id="upgrades-flux-count" class="balance-num neon-gold">0 ⚡</span>
+          </div>
+        </div>
+
+        <div class="tabs-nav">
+          <button id="tab-overclocks" class="tab-btn active">STAT OVERCLOCKS</button>
+          <button id="tab-skins" class="tab-btn">NEON SKINS</button>
+        </div>
+
+        <div class="tabs-content">
+          <!-- Overclocks Tab -->
+          <div id="content-overclocks" class="tab-pane">
+            <div id="upgrades-list" class="upgrades-grid"></div>
+          </div>
+
+          <!-- Skins Tab -->
+          <div id="content-skins" class="tab-pane hidden">
+            <div id="skins-list" class="skins-grid"></div>
+          </div>
+        </div>
+
+        <div class="upgrades-footer">
+          <button id="btn-close-upgrades" class="btn btn-secondary">BACK TO MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROTATE DEVICE PROMPT (Portrait Enforcer) -->
+    <div id="rotate-prompt" class="overlay-layer screen-center hidden">
+      <div class="glass-panel rotate-card">
+        <div class="rotate-phone-anim">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+            <path d="M12 18h.01"/>
+          </svg>
+        </div>
+        <h2 class="neon-cyan">ROTATE DEVICE</h2>
+        <p>LOOP//BREAK is designed for landscape combat.<br>Please rotate your device horizontally to resume.</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
