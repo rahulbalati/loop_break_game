@@ -101,7 +101,7 @@ export class Player {
     return true;
   }
 
-  pulse(enemies, particleSystem) {
+  pulse(enemies, particleSystem, shards = []) {
     if (!this.pulseUnlocked || this.pulseCooldownTimer > 0) return false;
 
     this.pulseCooldownTimer = this.pulseCooldownMax;
@@ -122,6 +122,21 @@ export class Player {
         enemy.applyStun(CONFIG.PULSE.STUN_DURATION);
       }
     }
+
+    // Vacuum pull nearby shards directly toward player on pulse
+    if (shards && shards.length > 0) {
+      for (const shard of shards) {
+        const dx = this.x - shard.x;
+        const dy = this.y - shard.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < CONFIG.PULSE.BASE_RADIUS * 2.2 && dist > 1) {
+          shard.vx += (dx / dist) * 420;
+          shard.vy += (dy / dist) * 420;
+          shard.isMagnetized = true;
+        }
+      }
+    }
+
     return true;
   }
 

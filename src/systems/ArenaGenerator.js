@@ -91,8 +91,22 @@ export class ArenaGenerator {
       for (let i = shards.length; i < targetShards; i++) {
         const angle = (i / targetShards) * Math.PI * 2;
         const dist = Math.min(this.width * 0.25, this.height * 0.3);
-        const fx = this.width / 2 + Math.cos(angle) * dist;
-        const fy = this.height / 2 + Math.sin(angle) * dist;
+        let fx = this.width / 2 + Math.cos(angle) * dist;
+        let fy = this.height / 2 + Math.sin(angle) * dist;
+
+        // Ensure safe clearance from all obstacles
+        for (const obs of obstacles) {
+          const odist = Math.hypot(fx - obs.x, fy - obs.y);
+          if (odist < obs.radius + 65) {
+            const pushAngle = odist > 0.001 ? Math.atan2(fy - obs.y, fx - obs.x) : angle;
+            fx = obs.x + Math.cos(pushAngle) * (obs.radius + 70);
+            fy = obs.y + Math.sin(pushAngle) * (obs.radius + 70);
+          }
+        }
+
+        // Clamp safely inside arena walls
+        fx = Math.max(pad + 20, Math.min(this.width - pad - 20, fx));
+        fy = Math.max(pad + 20, Math.min(this.height - pad - 20, fy));
         shards.push(new Shard(fx, fy));
       }
     }

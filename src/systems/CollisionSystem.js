@@ -110,10 +110,10 @@ export class CollisionSystem {
       }
     }
 
-    // 4. Player vs Exit Portal
+    // 4. Player vs Exit Portal (Generous hitbox so mobile players easily breach floor)
     if (portal && portal.isUnlocked) {
       const dist = Math.hypot(player.x - portal.x, player.y - portal.y);
-      if (dist < player.radius + portal.radius * 0.95) {
+      if (dist < player.radius + portal.radius * 1.5) {
         if (onLevelCompleted) {
           onLevelCompleted();
         }

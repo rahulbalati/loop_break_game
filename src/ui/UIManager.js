@@ -127,12 +127,14 @@ export class UIManager {
     // Resume
     this.dom.btnResume.addEventListener('click', () => {
       audio.playClick();
+      this.requestFullscreenAuto();
       this.game.resumeGame();
     });
 
     // Restart from Pause
     this.dom.btnRestartPause.addEventListener('click', () => {
       audio.playClick();
+      this.requestFullscreenAuto();
       this.game.startRun();
     });
 
@@ -158,12 +160,14 @@ export class UIManager {
     // Next Level Continue
     this.dom.btnNextLevel.addEventListener('click', () => {
       audio.playClick();
+      this.requestFullscreenAuto();
       this.game.proceedToNextLevel();
     });
 
     // Game Over Restart
     this.dom.btnRestartOver.addEventListener('click', () => {
       audio.playClick();
+      this.requestFullscreenAuto();
       this.game.startRun();
     });
 

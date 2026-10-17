@@ -57,7 +57,35 @@ export class GameEngine {
 
     this.handleResize();
     window.addEventListener('resize', () => this.handleResize());
-    window.addEventListener('orientationchange', () => this.handleResize());
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => this.handleResize(), 120);
+    });
+    document.addEventListener('fullscreenchange', () => {
+      setTimeout(() => this.handleResize(), 120);
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      setTimeout(() => this.handleResize(), 120);
+    });
+
+    // Mobile Background / Tab Switch Lifecycle Management
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Tab went to background: pause game to prevent background death/desync
+        if (this.state === 'PLAYING') {
+          this.pauseGame();
+        }
+      } else {
+        // Tab restored: force immediate layout re-sync and audio wakeup
+        this.handleResize();
+        if (this.ui) this.ui.checkOrientation();
+        audio.ensureContext();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      this.handleResize();
+      audio.ensureContext();
+    });
   }
 
   setUI(uiManager) {
@@ -70,6 +98,8 @@ export class GameEngine {
 
     // Calculate real viewport aspect ratio (e.g. 1.777 on 16:9, 2.16 on iPhone, 2.22 on Galaxy)
     const aspect = Math.max(1.1, windowWidth / windowHeight);
+
+    const oldWidth = this.virtualWidth || 1280;
 
     // Dynamic Virtual Resolution: Fixed 720 base height, width adapts to match aspect ratio perfectly
     this.virtualHeight = CONFIG.BASE_HEIGHT;
@@ -89,11 +119,60 @@ export class GameEngine {
       this.arenaGen.height = this.virtualHeight;
     }
 
-    // Safely clamp player inside the newly adapted arena bounds
-    if (this.player) {
-      const pad = this.player.radius + 14;
-      this.player.x = Math.max(pad, Math.min(this.virtualWidth - pad, this.player.x));
-      this.player.y = Math.max(pad, Math.min(this.virtualHeight - pad, this.player.y));
+    // Proportional Entity Relayout & Wall Clamping (Ensures NO entity is ever clipped or lost off-screen)
+    if (this.state === 'PLAYING' || this.state === 'PAUSED' || this.state === 'LEVEL_CLEAR') {
+      const scaleRatio = oldWidth > 0 ? this.virtualWidth / oldWidth : 1;
+
+      // 1. Player
+      if (this.player) {
+        if (scaleRatio !== 1) this.player.x *= scaleRatio;
+        const pad = this.player.radius + 14;
+        this.player.x = Math.max(pad, Math.min(this.virtualWidth - pad, this.player.x));
+        this.player.y = Math.max(pad, Math.min(this.virtualHeight - pad, this.player.y));
+      }
+
+      // 2. Portal
+      if (this.portal) {
+        if (scaleRatio !== 1) this.portal.x *= scaleRatio;
+        const pad = 90;
+        this.portal.x = Math.max(pad, Math.min(this.virtualWidth - pad, this.portal.x));
+        this.portal.y = Math.max(pad, Math.min(this.virtualHeight - pad, this.portal.y));
+      }
+
+      // 3. Shards
+      if (this.shards && this.shards.length > 0) {
+        for (const shard of this.shards) {
+          if (scaleRatio !== 1) shard.x *= scaleRatio;
+          const pad = shard.radius + 24;
+          shard.x = Math.max(pad, Math.min(this.virtualWidth - pad, shard.x));
+          shard.y = Math.max(pad, Math.min(this.virtualHeight - pad, shard.y));
+        }
+      }
+
+      // 4. Obstacles
+      if (this.obstacles && this.obstacles.length > 0) {
+        for (const obs of this.obstacles) {
+          if (scaleRatio !== 1) obs.x *= scaleRatio;
+          const pad = obs.radius + 24;
+          obs.x = Math.max(pad, Math.min(this.virtualWidth - pad, obs.x));
+          obs.y = Math.max(pad, Math.min(this.virtualHeight - pad, obs.y));
+        }
+      }
+
+      // 5. Enemies
+      if (this.enemies && this.enemies.length > 0) {
+        for (const enemy of this.enemies) {
+          if (scaleRatio !== 1) enemy.x *= scaleRatio;
+          const pad = enemy.radius + 16;
+          enemy.x = Math.max(pad, Math.min(this.virtualWidth - pad, enemy.x));
+          enemy.y = Math.max(pad, Math.min(this.virtualHeight - pad, enemy.y));
+        }
+      }
+    }
+
+    // Refresh touch joystick bounds immediately
+    if (this.input) {
+      this.input.update(this.virtualWidth, this.virtualHeight);
     }
   }
 
@@ -234,7 +313,7 @@ export class GameEngine {
       this.player.dash(this.input.moveVector, this.particleSystem);
     }
     if (this.input.consumePulse()) {
-      this.player.pulse(this.enemies, this.particleSystem);
+      this.player.pulse(this.enemies, this.particleSystem, this.shards);
     }
     if (this.input.consumePause()) {
       this.pauseGame();
@@ -262,9 +341,9 @@ export class GameEngine {
       enemy.update(dt, this.player, decoy, this.virtualWidth, this.virtualHeight);
     }
 
-    // Update Shards (with arena boundary clamping so shards never escape)
+    // Update Shards (with obstacle repulsion and boundary clamping)
     for (const shard of this.shards) {
-      shard.update(dt, this.player, this.virtualWidth, this.virtualHeight);
+      shard.update(dt, this.player, this.virtualWidth, this.virtualHeight, this.obstacles);
     }
 
     // Update Portal
@@ -372,7 +451,7 @@ export class GameEngine {
     if (this.state === 'PLAYING' || this.state === 'PAUSED' || this.state === 'LEVEL_CLEAR') {
       // 4. Render Exit Portal
       if (this.portal) {
-        this.portal.render(this.ctx, this.player);
+        this.portal.render(this.ctx, this.player, this.shards);
       }
 
       // 5. Render Shards

@@ -20,7 +20,7 @@ export class Shard {
     this.isMagnetized = false;
   }
 
-  update(dt, player, arenaWidth = 1280, arenaHeight = 720) {
+  update(dt, player, arenaWidth = 1280, arenaHeight = 720, obstacles = []) {
     if (this.isCollected) return;
 
     // Gentle hover animation
@@ -52,6 +52,37 @@ export class Shard {
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+
+    // Obstacle Repulsion: Shards can NEVER be trapped or resting inside a pillar
+    if (obstacles && obstacles.length > 0) {
+      for (let i = 0; i < obstacles.length; i++) {
+        const obs = obstacles[i];
+        const odx = this.x - obs.x;
+        const ody = this.y - obs.y;
+        const oDist = Math.hypot(odx, ody);
+        const minClearance = obs.radius + this.radius + 14;
+
+        if (oDist < minClearance) {
+          // Zero division guard: if shard is at exact center of obstacle, push right
+          let nx = 1;
+          let ny = 0;
+          if (oDist > 0.001) {
+            nx = odx / oDist;
+            ny = ody / oDist;
+          }
+          const overlap = minClearance - oDist;
+          this.x += nx * overlap;
+          this.y += ny * overlap;
+
+          // Cancel inward velocity and deflect tangent/outward
+          const dot = this.vx * nx + this.vy * ny;
+          if (dot < 0) {
+            this.vx -= dot * nx * 1.2;
+            this.vy -= dot * ny * 1.2;
+          }
+        }
+      }
+    }
 
     // Strict Arena Wall Clamping: Shards can NEVER escape the arena
     const pad = this.radius + 18;
