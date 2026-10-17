@@ -1,4 +1,4 @@
-// LOOP//BREAK - UI & Screen State Orchestrator
+// LOOP//BREAK - UI & Screen State Orchestrator with Fullscreen & Tutorial Directives
 
 import { CONFIG } from '../config.js';
 import { saveSystem } from '../systems/SaveSystem.js';
@@ -8,6 +8,8 @@ import { platform } from '../systems/CrazyGamesSDK.js';
 export class UIManager {
   constructor(gameEngine) {
     this.game = gameEngine;
+    this.directiveTimeout = null;
+
     this.dom = {
       // Screens
       startScreen: document.getElementById('start-screen'),
@@ -16,6 +18,7 @@ export class UIManager {
       levelClearModal: document.getElementById('level-clear-modal'),
       gameOverModal: document.getElementById('game-over-modal'),
       upgradesModal: document.getElementById('upgrades-modal'),
+      tutorialModal: document.getElementById('tutorial-modal'),
       rotatePrompt: document.getElementById('rotate-prompt'),
 
       // HUD Elements
@@ -25,15 +28,25 @@ export class UIManager {
       hudCombo: document.getElementById('hud-combo'),
       hudShields: document.getElementById('hud-shields'),
       hudPauseBtn: document.getElementById('hud-pause-btn'),
+      hudFullscreenBtn: document.getElementById('hud-fullscreen-btn'),
+      hudDirective: document.getElementById('hud-directive'),
+      directiveTitle: document.getElementById('directive-title'),
+      directiveText: document.getElementById('directive-text'),
 
       // Start Screen Elements
       btnStart: document.getElementById('btn-start-game'),
       btnOpenUpgrades: document.getElementById('btn-open-upgrades'),
+      btnOpenTutorial: document.getElementById('btn-open-tutorial'),
+      startFullscreenBtn: document.getElementById('start-fullscreen-btn'),
       startHighScore: document.getElementById('start-high-score'),
       startHighFloor: document.getElementById('start-high-floor'),
       startFlux: document.getElementById('start-flux-count'),
       desktopControlsHint: document.getElementById('desktop-controls-hint'),
       mobileControlsHint: document.getElementById('mobile-controls-hint'),
+
+      // Tutorial Modal Elements
+      btnStartFromTutorial: document.getElementById('btn-start-from-tutorial'),
+      btnCloseTutorial: document.getElementById('btn-close-tutorial'),
 
       // Pause Screen Elements
       btnResume: document.getElementById('btn-resume'),
@@ -72,11 +85,43 @@ export class UIManager {
   }
 
   bindEvents() {
-    // Start game
+    // Start game & enter fullscreen
     this.dom.btnStart.addEventListener('click', () => {
       audio.playClick();
       audio.startBGM();
+      this.requestFullscreenAuto();
       this.game.startRun();
+    });
+
+    // Start from tutorial modal
+    this.dom.btnStartFromTutorial.addEventListener('click', () => {
+      audio.playClick();
+      audio.startBGM();
+      this.hideTutorialModal();
+      this.requestFullscreenAuto();
+      this.game.startRun();
+    });
+
+    // Tutorial open/close
+    this.dom.btnOpenTutorial.addEventListener('click', () => {
+      audio.playClick();
+      this.showTutorialModal();
+    });
+
+    this.dom.btnCloseTutorial.addEventListener('click', () => {
+      audio.playClick();
+      this.hideTutorialModal();
+    });
+
+    // Fullscreen buttons
+    this.dom.hudFullscreenBtn.addEventListener('click', () => {
+      audio.playClick();
+      this.toggleFullscreen();
+    });
+
+    this.dom.startFullscreenBtn.addEventListener('click', () => {
+      audio.playClick();
+      this.toggleFullscreen();
     });
 
     // Pause HUD button
@@ -170,6 +215,11 @@ export class UIManager {
       this.dom.contentOverclocks.classList.add('hidden');
     });
 
+    // Click directive banner to dismiss early
+    this.dom.hudDirective.addEventListener('click', () => {
+      this.dom.hudDirective.classList.add('hidden');
+    });
+
     // Orientation change listener
     window.addEventListener('resize', () => this.checkOrientation());
     window.addEventListener('orientationchange', () => this.checkOrientation());
@@ -191,6 +241,7 @@ export class UIManager {
         if (this.game.state === 'START') {
           audio.playClick();
           audio.startBGM();
+          this.requestFullscreenAuto();
           this.game.startRun();
         } else if (this.game.state === 'GAMEOVER') {
           audio.playClick();
@@ -201,12 +252,60 @@ export class UIManager {
         }
       }
       if (e.key === 'Escape') {
-        if (!this.dom.upgradesModal.classList.contains('hidden')) {
+        if (!this.dom.tutorialModal.classList.contains('hidden')) {
+          this.hideTutorialModal();
+        } else if (!this.dom.upgradesModal.classList.contains('hidden')) {
           this.dom.upgradesModal.classList.add('hidden');
           this.updateStartStats();
         }
       }
     });
+  }
+
+  // --- FULLSCREEN LOGIC ---
+  requestFullscreenAuto() {
+    // Only attempt auto-fullscreen if not currently in fullscreen
+    const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+    if (!isFs) {
+      this.toggleFullscreen();
+    }
+  }
+
+  toggleFullscreen() {
+    const doc = document;
+    const el = document.documentElement;
+    const isFs = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+
+    if (!isFs) {
+      try {
+        if (el.requestFullscreen) {
+          el.requestFullscreen().catch(() => {});
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) {
+          el.msRequestFullscreen();
+        }
+
+        // Lock to landscape on Android Chrome
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        }
+      } catch (err) {
+        // Safe fallback for restricted browsers
+      }
+    } else {
+      try {
+        if (doc.exitFullscreen) {
+          doc.exitFullscreen().catch(() => {});
+        } else if (doc.webkitExitFullscreen) {
+          doc.webkitExitFullscreen();
+        } else if (doc.msExitFullscreen) {
+          doc.msExitFullscreen();
+        }
+      } catch (err) {
+        // Safe fallback
+      }
+    }
   }
 
   checkOrientation() {
@@ -229,6 +328,8 @@ export class UIManager {
     this.dom.levelClearModal.classList.add('hidden');
     this.dom.gameOverModal.classList.add('hidden');
     this.dom.upgradesModal.classList.add('hidden');
+    this.dom.tutorialModal.classList.add('hidden');
+    this.dom.hudDirective.classList.add('hidden');
     this.updateStartStats();
   }
 
@@ -239,6 +340,53 @@ export class UIManager {
     this.dom.levelClearModal.classList.add('hidden');
     this.dom.gameOverModal.classList.add('hidden');
     this.dom.upgradesModal.classList.add('hidden');
+    this.dom.tutorialModal.classList.add('hidden');
+  }
+
+  showTutorialModal() {
+    this.dom.tutorialModal.classList.remove('hidden');
+  }
+
+  hideTutorialModal() {
+    this.dom.tutorialModal.classList.add('hidden');
+  }
+
+  // --- INTERACTIVE IN-GAME FLOOR DIRECTIVES ---
+  showFloorDirective(floor) {
+    if (this.directiveTimeout) {
+      clearTimeout(this.directiveTimeout);
+      this.directiveTimeout = null;
+    }
+
+    let title = '';
+    let text = '';
+
+    if (floor === 1) {
+      title = 'DIRECTIVE: SHARD COLLECTION';
+      text = 'Collect all golden Energy Shards to unlock the emerald Exit Portal! Avoid the Hunter.';
+    } else if (floor === 2) {
+      title = 'ABILITY UNLOCKED: [DASH]';
+      text = 'Tap DASH (or press SPACE) for a supersonic burst with temporary INVULNERABILITY!';
+    } else if (floor === 3) {
+      title = 'THE SIGNATURE ECHO SYSTEM ACTIVATED';
+      text = 'Your violet Ghost repeats your past path! Avoid it, or BAIT enemies into chasing it!';
+    } else if (floor === 4) {
+      title = 'ABILITY UNLOCKED: [KINETIC PULSE]';
+      text = 'Tap PULSE (or press E) to unleash an EMP shockwave that stuns & pushes back enemies!';
+    } else {
+      title = `FLOOR ${floor} IN PROGRESS`;
+      text = 'Dodge enemies, exploit your Echo decoy, collect all shards, and escape!';
+    }
+
+    this.dom.directiveTitle.innerText = title;
+    this.dom.directiveText.innerText = text;
+    this.dom.hudDirective.classList.remove('hidden');
+
+    // Auto-hide after 5.5 seconds
+    this.directiveTimeout = setTimeout(() => {
+      this.dom.hudDirective.classList.add('hidden');
+      this.directiveTimeout = null;
+    }, 5500);
   }
 
   showPauseModal() {
@@ -252,6 +400,7 @@ export class UIManager {
   }
 
   showLevelClearModal(floor, scoreGained) {
+    this.dom.hudDirective.classList.add('hidden');
     this.dom.clearFloorNum.innerText = `FLOOR ${floor} DECRYPTED`;
     this.dom.clearFloorScore.innerText = `+${scoreGained} PTS`;
     this.dom.levelClearModal.classList.remove('hidden');
@@ -262,6 +411,7 @@ export class UIManager {
   }
 
   showGameOverModal({ score, floor, fluxEarned }) {
+    this.dom.hudDirective.classList.add('hidden');
     this.dom.overScore.innerText = score.toLocaleString();
     this.dom.overBestScore.innerText = saveSystem.data.highScore.toLocaleString();
     this.dom.overFloor.innerText = floor;

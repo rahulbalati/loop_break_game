@@ -114,6 +114,7 @@ export class GameEngine {
     if (this.ui) {
       this.ui.showHUD();
       this.updateHUD();
+      this.ui.showFloorDirective(this.currentLevel);
     }
 
     platform.gameplayStart();
@@ -136,6 +137,10 @@ export class GameEngine {
 
     // Setup Echo (unlocked at Level 3)
     this.echo.setLevel(level, saveSystem.data.upgrades);
+
+    if (this.ui) {
+      this.ui.showFloorDirective(level);
+    }
   }
 
   proceedToNextLevel() {

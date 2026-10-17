@@ -58,6 +58,12 @@
           </div>
         </div>
 
+        <button id="hud-fullscreen-btn" class="hud-btn" aria-label="Toggle Fullscreen" title="Toggle Fullscreen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
+
         <button id="hud-pause-btn" class="hud-btn" aria-label="Pause Game">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <rect x="6" y="4" width="4" height="16" rx="1"/>
@@ -65,11 +71,28 @@
           </svg>
         </button>
       </div>
+
+      <!-- Contextual Interactive Floor Directive Banner -->
+      <div id="hud-directive" class="directive-banner hidden">
+        <span class="directive-icon">⚡</span>
+        <div class="directive-content">
+          <span id="directive-title" class="directive-title">DIRECTIVE</span>
+          <span id="directive-text" class="directive-text">Collect all Energy Shards to unlock the Exit Portal!</span>
+        </div>
+      </div>
     </div>
 
     <!-- START SCREEN -->
     <div id="start-screen" class="overlay-layer screen-center">
       <div class="glass-panel main-menu-panel">
+        <div class="menu-top-bar">
+          <button id="start-fullscreen-btn" class="hud-btn mini" aria-label="Toggle Fullscreen" title="Toggle Fullscreen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
+        </div>
+
         <div class="logo-wrapper">
           <h1 class="game-logo" data-text="LOOP//BREAK">LOOP<span class="logo-slash">//</span>BREAK</h1>
           <div class="game-tagline">YOUR PAST IS YOUR PERIL. BREAK THE ECHO.</div>
@@ -95,9 +118,14 @@
             <span class="btn-text">INITIALIZE RUN</span>
             <span class="btn-glow-bar"></span>
           </button>
-          <button id="btn-open-upgrades" class="btn btn-secondary">
-            <span>OVERCLOCKS & SKINS</span>
-          </button>
+          <div class="menu-sub-actions">
+            <button id="btn-open-tutorial" class="btn btn-secondary">
+              <span>HOW TO PLAY</span>
+            </button>
+            <button id="btn-open-upgrades" class="btn btn-secondary">
+              <span>CYBER LAB</span>
+            </button>
+          </div>
         </div>
 
         <!-- Desktop Controls Hint -->
@@ -228,6 +256,56 @@
 
         <div class="upgrades-footer">
           <button id="btn-close-upgrades" class="btn btn-secondary">BACK TO MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TUTORIAL / HOW TO PLAY MODAL -->
+    <div id="tutorial-modal" class="overlay-layer screen-center hidden">
+      <div class="glass-panel modal-panel tutorial-dialog">
+        <div class="modal-badge neon-cyan">TACTICAL BRIEFING</div>
+        <h2 class="modal-title">HOW TO PLAY</h2>
+
+        <div class="tutorial-cards">
+          <div class="tutorial-card">
+            <div class="tut-icon-box neon-gold">✦</div>
+            <div class="tut-body">
+              <h4>1. COLLECT ENERGY SHARDS</h4>
+              <p>Navigate with the <strong>Joystick</strong> (or <strong>WASD / Arrow Keys</strong>). Collect all golden shards to unlock the emerald Exit Portal.</p>
+            </div>
+          </div>
+
+          <div class="tutorial-card">
+            <div class="tut-icon-box neon-magenta">⧖</div>
+            <div class="tut-body">
+              <h4>2. THE SIGNATURE ECHO SYSTEM</h4>
+              <p>After a 2.4s delay, a violet <strong>Ghost</strong> repeats your exact path. <em>Touching it damages you</em>, but you can <strong>BAIT enemies</strong> into chasing your ghost while you escape!</p>
+            </div>
+          </div>
+
+          <div class="tutorial-card">
+            <div class="tut-icon-box neon-cyan">⚡</div>
+            <div class="tut-body">
+              <h4>3. PHASE DASH</h4>
+              <p>Tap <strong>DASH</strong> (or press <strong>SPACE</strong>) for a burst of speed with <strong>invulnerability frames</strong> to slip through danger.</p>
+            </div>
+          </div>
+
+          <div class="tutorial-card">
+            <div class="tut-icon-box neon-emerald">🌀</div>
+            <div class="tut-body">
+              <h4>4. KINETIC PULSE & ESCAPE</h4>
+              <p>Tap <strong>PULSE</strong> (or press <strong>E</strong>) to stun and push back nearby enemies with an EMP shockwave, then enter the green Vortex to advance!</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-buttons">
+          <button id="btn-start-from-tutorial" class="btn btn-primary btn-glow">
+            <span class="btn-text">INITIALIZE RUN</span>
+            <span class="btn-glow-bar"></span>
+          </button>
+          <button id="btn-close-tutorial" class="btn btn-secondary">BACK TO MENU</button>
         </div>
       </div>
     </div>
