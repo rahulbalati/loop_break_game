@@ -210,7 +210,8 @@ export class UIManager {
   }
 
   checkOrientation() {
-    const isPortrait = window.innerHeight > window.innerWidth && window.innerWidth < 850;
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isPortrait = isTouch && (window.innerHeight > window.innerWidth);
     if (isPortrait) {
       this.dom.rotatePrompt.classList.remove('hidden');
       if (this.game.state === 'PLAYING') {

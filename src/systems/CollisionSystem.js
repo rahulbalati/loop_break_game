@@ -113,7 +113,7 @@ export class CollisionSystem {
     // 4. Player vs Exit Portal
     if (portal && portal.isUnlocked) {
       const dist = Math.hypot(player.x - portal.x, player.y - portal.y);
-      if (dist < player.radius + portal.radius * 0.7) {
+      if (dist < player.radius + portal.radius * 0.95) {
         if (onLevelCompleted) {
           onLevelCompleted();
         }

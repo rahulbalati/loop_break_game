@@ -65,24 +65,36 @@ export class GameEngine {
   }
 
   handleResize() {
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
+    const windowWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight || 720;
 
-    // Maintain 16:9 aspect ratio
-    let targetWidth = windowWidth;
-    let targetHeight = targetWidth / CONFIG.ASPECT_RATIO;
+    // Calculate real viewport aspect ratio (e.g. 1.777 on 16:9, 2.16 on iPhone, 2.22 on Galaxy)
+    const aspect = Math.max(1.1, windowWidth / windowHeight);
 
-    if (targetHeight > windowHeight) {
-      targetHeight = windowHeight;
-      targetWidth = targetHeight * CONFIG.ASPECT_RATIO;
-    }
+    // Dynamic Virtual Resolution: Fixed 720 base height, width adapts to match aspect ratio perfectly
+    this.virtualHeight = CONFIG.BASE_HEIGHT;
+    this.virtualWidth = Math.round(CONFIG.BASE_HEIGHT * aspect);
 
-    this.canvas.style.width = `${targetWidth}px`;
-    this.canvas.style.height = `${targetHeight}px`;
+    // Fullscreen canvas
+    this.canvas.style.width = '100%';
+    this.canvas.style.height = '100%';
 
-    // Render resolution
+    // Native buffer resolution matches virtual dimensions
     this.canvas.width = this.virtualWidth;
     this.canvas.height = this.virtualHeight;
+
+    // Update arena generator
+    if (this.arenaGen) {
+      this.arenaGen.width = this.virtualWidth;
+      this.arenaGen.height = this.virtualHeight;
+    }
+
+    // Safely clamp player inside the newly adapted arena bounds
+    if (this.player) {
+      const pad = this.player.radius + 14;
+      this.player.x = Math.max(pad, Math.min(this.virtualWidth - pad, this.player.x));
+      this.player.y = Math.max(pad, Math.min(this.virtualHeight - pad, this.player.y));
+    }
   }
 
   startRun() {
@@ -244,9 +256,9 @@ export class GameEngine {
       enemy.update(dt, this.player, decoy, this.virtualWidth, this.virtualHeight);
     }
 
-    // Update Shards
+    // Update Shards (with arena boundary clamping so shards never escape)
     for (const shard of this.shards) {
-      shard.update(dt, this.player);
+      shard.update(dt, this.player, this.virtualWidth, this.virtualHeight);
     }
 
     // Update Portal
@@ -273,7 +285,8 @@ export class GameEngine {
         this.score += points;
 
         // Check if all required shards collected to unlock exit portal
-        if (this.shardsCollectedThisLevel >= this.requiredShards && !this.portal.isUnlocked) {
+        const allCleared = this.shardsCollectedThisLevel >= this.requiredShards || this.shards.length === 0;
+        if (allCleared && !this.portal.isUnlocked) {
           this.portal.setUnlocked(true);
           audio.playPortalUnlock();
           this.particleSystem.spawnPortalBurst(this.portal.x, this.portal.y);
@@ -285,6 +298,14 @@ export class GameEngine {
       onLevelCompleted: () => this.onLevelCompleted(),
       onPlayerDied: () => this.onPlayerDied(),
     });
+
+    // Fail-Safe: If all shards are collected in the arena, guarantee exit portal is open!
+    if (this.shards.length === 0 && this.portal && !this.portal.isUnlocked) {
+      this.portal.setUnlocked(true);
+      audio.playPortalUnlock();
+      this.particleSystem.spawnPortalBurst(this.portal.x, this.portal.y);
+      this.screenShake.shake(6, 0.25);
+    }
 
     this.updateHUD();
   }

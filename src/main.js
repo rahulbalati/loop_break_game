@@ -23,14 +23,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 3. Initialize CrazyGames SDK v3 asynchronously
   platform.init().catch(e => console.warn('Platform init issue', e));
 
-  // 5. Global user gesture listener to unlock Web Audio on iOS/browsers
+  // 4. Global user gesture listener to unlock Web Audio on iOS Safari and mobile browsers
   const unlockAudio = () => {
     audio.ensureContext();
     window.removeEventListener('pointerdown', unlockAudio);
     window.removeEventListener('keydown', unlockAudio);
+    window.removeEventListener('touchstart', unlockAudio);
+    window.removeEventListener('touchend', unlockAudio);
   };
-  window.addEventListener('pointerdown', unlockAudio);
-  window.addEventListener('keydown', unlockAudio);
+  window.addEventListener('pointerdown', unlockAudio, { passive: true });
+  window.addEventListener('keydown', unlockAudio, { passive: true });
+  window.addEventListener('touchstart', unlockAudio, { passive: true });
+  window.addEventListener('touchend', unlockAudio, { passive: true });
 
   console.log('[LOOP//BREAK] System initialized. Ready to break the loop.');
 });

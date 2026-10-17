@@ -1,10 +1,10 @@
 // LOOP//BREAK - Game Configuration & Balance Parameters
 
 export const CONFIG = {
-  // Arena logical virtual dimensions (scaled dynamically to fit screen while maintaining aspect ratio)
-  VIRTUAL_WIDTH: 1280,
-  VIRTUAL_HEIGHT: 720,
-  ASPECT_RATIO: 16 / 9,
+  // Dynamic Virtual Resolution System (adapts dynamically to any mobile or desktop screen)
+  BASE_HEIGHT: 720,
+  MIN_WIDTH: 960,
+  MAX_WIDTH: 1920,
 
   // Player Specs
   PLAYER: {

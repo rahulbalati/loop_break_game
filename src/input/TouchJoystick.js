@@ -55,9 +55,9 @@ export class TouchJoystick {
         const screenX = (touch.clientX - rect.left) * scaleX;
         const screenY = (touch.clientY - rect.top) * scaleY;
 
-        // Check Dash Button first
+        // Check Dash Button first with generous 1.55x touch tolerance for mobile thumbs
         const distToDash = Math.hypot(screenX - this.dashButton.x, screenY - this.dashButton.y);
-        if (distToDash <= this.dashButton.radius * 1.3 && this.dashTouchId === null) {
+        if (distToDash <= this.dashButton.radius * 1.55 && this.dashTouchId === null) {
           this.dashTouchId = touch.identifier;
           this.dashTriggered = true;
           e.preventDefault();
@@ -67,7 +67,7 @@ export class TouchJoystick {
         // Check Pulse Button
         if (this.pulseUnlocked) {
           const distToPulse = Math.hypot(screenX - this.pulseButton.x, screenY - this.pulseButton.y);
-          if (distToPulse <= this.pulseButton.radius * 1.3 && this.pulseTouchId === null) {
+          if (distToPulse <= this.pulseButton.radius * 1.55 && this.pulseTouchId === null) {
             this.pulseTouchId = touch.identifier;
             this.pulseTriggered = true;
             e.preventDefault();
@@ -119,6 +119,12 @@ export class TouchJoystick {
           this.pulseTouchId = null;
         }
       }
+      // Safety fail-safe: if no active touches remain on screen, reset everything
+      if (e.touches && e.touches.length === 0) {
+        this.resetJoystick();
+        this.dashTouchId = null;
+        this.pulseTouchId = null;
+      }
     };
 
     window.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -128,19 +134,23 @@ export class TouchJoystick {
   }
 
   updateLayout(virtualWidth, virtualHeight) {
-    // Position buttons on bottom-right inside safe zone
-    this.dashButton.x = virtualWidth - 85;
-    this.dashButton.y = virtualHeight - 85;
-    this.dashButton.radius = 48;
+    // Dynamically calculate responsive margins & target sizes based on actual dimensions
+    const rightMargin = Math.max(95, Math.min(180, virtualWidth * 0.09));
+    const bottomMargin = Math.max(90, Math.min(145, virtualHeight * 0.16));
 
-    this.pulseButton.x = virtualWidth - 75;
-    this.pulseButton.y = virtualHeight - 195;
-    this.pulseButton.radius = 38;
+    this.dashButton.radius = Math.max(56, Math.min(72, virtualHeight * 0.095));
+    this.dashButton.x = virtualWidth - rightMargin;
+    this.dashButton.y = virtualHeight - bottomMargin;
+
+    this.pulseButton.radius = Math.max(44, Math.min(58, virtualHeight * 0.075));
+    this.pulseButton.x = virtualWidth - rightMargin + 10;
+    this.pulseButton.y = this.dashButton.y - (this.dashButton.radius + this.pulseButton.radius + 24);
 
     // Default neutral base position on bottom-left if inactive
     if (!this.isActive) {
-      this.baseX = 130;
-      this.baseY = virtualHeight - 120;
+      const leftMargin = Math.max(120, Math.min(220, virtualWidth * 0.12));
+      this.baseX = leftMargin;
+      this.baseY = virtualHeight - bottomMargin;
       this.thumbX = this.baseX;
       this.thumbY = this.baseY;
     }
