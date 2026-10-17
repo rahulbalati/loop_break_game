@@ -240,6 +240,7 @@ export class GameEngine {
     this.currentLevel++;
     this.loadLevel(this.currentLevel);
     this.updateHUD();
+    platform.gameplayStart();
   }
 
   pauseGame() {
@@ -292,6 +293,7 @@ export class GameEngine {
     audio.playLevelClear();
     this.particleSystem.spawnPortalBurst(this.portal.x, this.portal.y);
     platform.happytime();
+    platform.gameplayStop();
 
     const levelBonus = this.currentLevel * 250;
     this.score += levelBonus;

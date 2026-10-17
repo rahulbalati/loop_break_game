@@ -10,6 +10,16 @@ export class AudioSynthesizer {
     this.bgmTimer = null;
     this.bgmStep = 0;
     this.isMuted = false;
+    this.sdkMuted = false;
+  }
+
+  setSdkMute(muted) {
+    this.sdkMuted = !!muted;
+    if (this.sdkMuted || this.isMuted) {
+      this.stopBGM();
+    } else if (this.bgmEnabled) {
+      this.startBGM();
+    }
   }
 
   init() {
@@ -59,7 +69,7 @@ export class AudioSynthesizer {
   // --- SOUND EFFECTS (SFX) ---
 
   playClick() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -82,7 +92,7 @@ export class AudioSynthesizer {
   }
 
   playShardPickup(combo = 1) {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -115,7 +125,7 @@ export class AudioSynthesizer {
   }
 
   playDash() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -150,7 +160,7 @@ export class AudioSynthesizer {
   }
 
   playPulse() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -174,7 +184,7 @@ export class AudioSynthesizer {
   }
 
   playEnemyWarning() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -197,7 +207,7 @@ export class AudioSynthesizer {
   }
 
   playHit() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -220,7 +230,7 @@ export class AudioSynthesizer {
   }
 
   playPortalUnlock() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -246,7 +256,7 @@ export class AudioSynthesizer {
   }
 
   playLevelClear() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -272,7 +282,7 @@ export class AudioSynthesizer {
   }
 
   playGameOver() {
-    if (!this.sfxEnabled || this.isMuted) return;
+    if (!this.sfxEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -300,7 +310,7 @@ export class AudioSynthesizer {
 
   // --- PROCEDURAL AMBIENT SYNTH BGM ---
   startBGM() {
-    if (this.bgmTimer || !this.bgmEnabled || this.isMuted) return;
+    if (this.bgmTimer || !this.bgmEnabled || this.isMuted || this.sdkMuted) return;
     this.ensureContext();
     if (!this.ctx) return;
 
@@ -308,7 +318,7 @@ export class AudioSynthesizer {
     this.bgmStep = 0;
 
     this.bgmTimer = setInterval(() => {
-      if (!this.bgmEnabled || this.isMuted || !this.ctx) return;
+      if (!this.bgmEnabled || this.isMuted || this.sdkMuted || !this.ctx) return;
       try {
         const t = this.ctx.currentTime;
         const freq = bassNotes[this.bgmStep % bassNotes.length];

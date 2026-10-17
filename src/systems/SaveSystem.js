@@ -1,4 +1,5 @@
-// LOOP//BREAK - Safe Persistent Local Storage & Progression Manager
+// LOOP//BREAK - Safe Persistent Local Storage & CrazyGames Cloud Data Manager
+import { platform } from './CrazyGamesSDK.js';
 
 const SAVE_KEY = 'loopbreak_save_data_v1';
 
@@ -39,7 +40,7 @@ export class SaveSystem {
 
   load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = platform.getItem(SAVE_KEY);
       if (!raw) return { ...DEFAULT_SAVE_DATA };
       const parsed = JSON.parse(raw);
       // Validate schema & merge defaults
@@ -58,16 +59,16 @@ export class SaveSystem {
           : ['cyan_default'],
       };
     } catch (e) {
-      console.warn('Could not read localStorage, using default state', e);
+      console.warn('Could not read save data, using default state', e);
       return { ...DEFAULT_SAVE_DATA };
     }
   }
 
   save() {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+      platform.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch (e) {
-      console.warn('Could not save to localStorage', e);
+      console.warn('Could not write save data', e);
     }
   }
 

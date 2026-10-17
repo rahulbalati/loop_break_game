@@ -239,6 +239,8 @@ for (let s = 0; s < testShards.length; s++) {
     testShards[s].x <= shrinkWidth - 24 && testShards[s].x >= 24,
     `Shard ${s} safely clamped inside shrunken viewport (shard.x=${Math.round(testShards[s].x)})`
   );
+}
+
 // TEST 9: SECTOR CHECKPOINT MILESTONES (OPTION 1)
 console.log('\n--- Test 9: Sector Checkpoint Milestones (Option 1) ---');
 assert(CONFIG.SECTORS.length === 4, 'CONFIG.SECTORS contains 4 milestone sectors');
