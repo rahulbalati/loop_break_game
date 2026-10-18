@@ -17,8 +17,8 @@
   <!-- CrazyGames SDK v3 Script Tag -->
   <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 
-  <script type="module" crossorigin src="./assets/index-8n9kz6rB.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-I4EMCkjM.css">
+  <script type="module" crossorigin src="./assets/index-D0WF4mKb.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DaybJk3d.css">
 </head>
 <body>
   <!-- Main Game Container -->
@@ -125,10 +125,10 @@
           </div>
         </div>
 
-        <!-- Desktop Controls Hint -->
+        <!-- Desktop Controls Hint (QWERTY + AZERTY + Arrows) -->
         <div id="desktop-controls-hint" class="controls-guide">
-          <div class="control-key-item"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Move</div>
-          <div class="control-key-item"><kbd>SPACE</kbd> Dash (Invulnerable)</div>
+          <div class="control-key-item"><kbd>WASD</kbd> / <kbd>ZQSD</kbd> / <kbd>↑←↓→</kbd> Move</div>
+          <div class="control-key-item"><kbd>SPACE</kbd> / <kbd>SHIFT</kbd> Dash (Invulnerable)</div>
           <div class="control-key-item"><kbd>E</kbd> / <kbd>J</kbd> Kinetic Pulse</div>
           <div class="control-key-item"><kbd>ESC</kbd> Pause</div>
         </div>
@@ -157,6 +157,7 @@
           <span class="btn-text">NEXT FLOOR &rarr;</span>
           <span class="btn-glow-bar"></span>
         </button>
+        <div class="modal-key-hint"><kbd>SPACE</kbd> or <kbd>ENTER</kbd> to Advance</div>
       </div>
     </div>
 
@@ -209,6 +210,12 @@
           </div>
         </div>
 
+        <div id="over-cause-box" class="cause-box">
+          <span class="stat-label">TERMINATED BY</span>
+          <span id="over-cause" class="stat-num neon-crimson">ENEMY DRONE</span>
+          <p id="over-tip" class="cause-tip">Tip: Tap DASH (SPACE) for a supersonic burst with temporary invulnerability!</p>
+        </div>
+
         <div class="modal-buttons">
           <button id="btn-restart-over" class="btn btn-primary btn-glow">
             <span class="btn-text">RE-INITIALIZE</span>
@@ -217,6 +224,7 @@
           <button id="btn-shop-over" class="btn btn-secondary">UPGRADE LAB</button>
           <button id="btn-menu-over" class="btn btn-outline">RETURN TO HUB</button>
         </div>
+        <div class="modal-key-hint"><kbd>SPACE</kbd> or <kbd>ENTER</kbd> to Restart</div>
       </div>
     </div>
 
