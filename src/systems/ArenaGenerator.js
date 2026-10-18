@@ -139,17 +139,23 @@ export class ArenaGenerator {
     };
 
     if (level === 1) {
-      // 1 Slow Hunter
-      const pos = getSafeEnemyPos();
-      enemies.push(new HunterEnemy(pos.x, pos.y, 0.72));
+      // Floor 1: Training Sector — Passive Training Drone (slow 0.35x speed, extra safe distance)
+      let pos = getSafeEnemyPos();
+      for (let attempt = 0; attempt < 60; attempt++) {
+        if (Math.hypot(pos.x - playerSpawn.x, pos.y - playerSpawn.y) > 360) break;
+        pos = getSafeEnemyPos();
+      }
+      const drone = new HunterEnemy(pos.x, pos.y, 0.35);
+      drone.isTrainingDrone = true;
+      enemies.push(drone);
     } else if (level === 2) {
-      // 1 Standard Hunter
+      // Floor 2: Dash Practice Drone (0.65x speed)
       const pos = getSafeEnemyPos();
-      enemies.push(new HunterEnemy(pos.x, pos.y, 0.88));
+      enemies.push(new HunterEnemy(pos.x, pos.y, 0.65));
     } else if (level === 3) {
-      // Level 3 introduces Echo! 1 Hunter keeps it focused
+      // Floor 3: Introduce Echo — 1 Standard Hunter (0.85x speed)
       const pos = getSafeEnemyPos();
-      enemies.push(new HunterEnemy(pos.x, pos.y, 0.95));
+      enemies.push(new HunterEnemy(pos.x, pos.y, 0.85));
     } else if (level === 4) {
       // Introduce Interceptor
       const pos1 = getSafeEnemyPos();

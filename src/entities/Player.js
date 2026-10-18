@@ -140,11 +140,12 @@ export class Player {
     return true;
   }
 
-  takeDamage(particleSystem, screenShake) {
+  takeDamage(particleSystem, screenShake, source = 'Enemy Drone') {
     if (this.isDashing || this.invulnerableTimer > 0) return false;
 
     this.health--;
     this.invulnerableTimer = CONFIG.PLAYER.INVULNERABLE_DURATION;
+    this.lastDamageSource = source;
 
     audio.playHit();
     particleSystem.spawnHitSparks(this.x, this.y, '#ff2a5f');

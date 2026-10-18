@@ -67,8 +67,8 @@ export class TouchJoystick {
       }
 
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      const scaleX = (this.virtualWidth || this.canvas.width) / rect.width;
+      const scaleY = (this.virtualHeight || this.canvas.height) / rect.height;
 
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
@@ -96,7 +96,7 @@ export class TouchJoystick {
         }
 
         // Left 50% of the screen initiates the Joystick
-        if (screenX < this.canvas.width * 0.5 && this.touchId === null) {
+        if (screenX < (this.virtualWidth || this.canvas.width) * 0.5 && this.touchId === null) {
           this.touchId = touch.identifier;
           this.isActive = true;
           this.baseX = screenX;
@@ -112,8 +112,8 @@ export class TouchJoystick {
     const onTouchMove = (e) => {
       if (!this.enabled || !this.isActive) return;
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      const scaleX = (this.virtualWidth || this.canvas.width) / rect.width;
+      const scaleY = (this.virtualHeight || this.canvas.height) / rect.height;
 
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
@@ -154,6 +154,9 @@ export class TouchJoystick {
   }
 
   updateLayout(virtualWidth, virtualHeight) {
+    this.virtualWidth = virtualWidth || 1280;
+    this.virtualHeight = virtualHeight || 720;
+
     // Dynamic Responsive Scaling for Joystick and Action Buttons
     const scaleFactor = Math.max(0.95, Math.min(1.35, virtualHeight / 720));
 

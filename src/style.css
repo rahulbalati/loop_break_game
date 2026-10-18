@@ -659,6 +659,42 @@ html, body {
   margin-right: 2px;
 }
 
+.modal-key-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+.modal-key-hint kbd {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: monospace;
+  color: #00f0ff;
+  font-weight: bold;
+}
+
+.cause-box {
+  background: rgba(255, 42, 95, 0.08);
+  border: 1px solid rgba(255, 42, 95, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 4px 0 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: center;
+}
+
+.cause-tip {
+  font-size: 10.5px;
+  color: #94a3b8;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
 /* ----------------------------------------------------
    MODALS: LEVEL CLEAR, GAME OVER, PAUSE
    ---------------------------------------------------- */

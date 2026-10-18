@@ -99,11 +99,12 @@ export class CollisionSystem {
           particleSystem.spawnHitSparks(enemy.x, enemy.y, enemy.color);
         } else {
           // Player takes damage
-          const damaged = player.takeDamage(particleSystem, screenShake);
+          const enemyName = enemy.type ? `${enemy.type.toUpperCase()} DRONE` : 'HUNTER DRONE';
+          const damaged = player.takeDamage(particleSystem, screenShake, enemyName);
           if (damaged) {
             this.comboMultiplier = 1.0;
             if (player.health <= 0 && onPlayerDied) {
-              onPlayerDied();
+              onPlayerDied(enemyName);
             }
           }
         }

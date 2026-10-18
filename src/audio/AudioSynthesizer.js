@@ -261,23 +261,30 @@ export class AudioSynthesizer {
     if (!this.ctx) return;
 
     const t = this.ctx.currentTime;
-    const chords = [523.25, 659.25, 783.99, 1046.50]; // C Major triumph
+    const chords = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6 triumph
     chords.forEach((freq, idx) => {
-      const startTime = t + idx * 0.08;
+      const startTime = t + idx * 0.07;
       const osc = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, startTime);
 
-      gain.gain.setValueAtTime(this.sfxVolume * 0.4, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 2, startTime);
+
+      gain.gain.setValueAtTime(this.sfxVolume * 0.42, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.55);
 
       osc.connect(gain);
+      osc2.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start(startTime);
-      osc.stop(startTime + 0.45);
+      osc2.start(startTime);
+      osc.stop(startTime + 0.6);
+      osc2.stop(startTime + 0.6);
     });
   }
 

@@ -20,6 +20,9 @@ export class InputManager {
     this.pulseTriggered = false;
     this.pauseTriggered = false;
 
+    // Input device detection ('keyboard' or 'touch')
+    this.lastInputType = 'keyboard';
+
     this.bindKeyboard();
   }
 
@@ -32,21 +35,27 @@ export class InputManager {
 
   bindKeyboard() {
     window.addEventListener('keydown', (e) => {
+      this.lastInputType = 'keyboard';
+
       // Prevent browser scroll on arrow keys and space when active
       if (this.isGameplayActive && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
       }
 
-      this.keys[e.key.toLowerCase()] = true;
+      const keyLower = e.key.toLowerCase();
+      this.keys[keyLower] = true;
       this.keys[e.code] = true;
 
-      if (e.code === 'Space') {
+      // Dash triggers: Space, Left/Right Shift, K
+      if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyK' || keyLower === 'k') {
         this.dashTriggered = true;
       }
-      if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'j') {
+      // Pulse triggers: E, J, F
+      if (keyLower === 'e' || keyLower === 'j' || keyLower === 'f' || e.code === 'KeyE' || e.code === 'KeyJ' || e.code === 'KeyF') {
         this.pulseTriggered = true;
       }
-      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+      // Pause triggers: Escape, P
+      if (e.key === 'Escape' || keyLower === 'p' || e.code === 'KeyP') {
         this.pauseTriggered = true;
       }
     });
@@ -66,20 +75,25 @@ export class InputManager {
   update(virtualWidth, virtualHeight) {
     this.joystick.updateLayout(virtualWidth, virtualHeight);
 
-    // Compute Keyboard Vector
+    // Compute Keyboard Vector (QWERTY + AZERTY + Arrows)
     let kx = 0;
     let ky = 0;
 
-    if (this.keys['w'] || this.keys['arrowup']) ky -= 1;
-    if (this.keys['s'] || this.keys['arrowdown']) ky += 1;
-    if (this.keys['a'] || this.keys['arrowleft']) kx -= 1;
-    if (this.keys['d'] || this.keys['arrowright']) kx += 1;
+    // Up: W (QWERTY) or Z (AZERTY) or ArrowUp
+    if (this.keys['w'] || this.keys['z'] || this.keys['arrowup'] || this.keys['KeyW'] || this.keys['KeyZ']) ky -= 1;
+    // Down: S or ArrowDown
+    if (this.keys['s'] || this.keys['arrowdown'] || this.keys['KeyS']) ky += 1;
+    // Left: A (QWERTY) or Q (AZERTY) or ArrowLeft
+    if (this.keys['a'] || this.keys['q'] || this.keys['arrowleft'] || this.keys['KeyA'] || this.keys['KeyQ']) kx -= 1;
+    // Right: D or ArrowRight
+    if (this.keys['d'] || this.keys['arrowright'] || this.keys['KeyD']) kx += 1;
 
     // Normalize diagonal keyboard speed
     const kLen = Math.hypot(kx, ky);
     if (kLen > 0) {
       kx /= kLen;
       ky /= kLen;
+      this.lastInputType = 'keyboard';
     }
 
     // Combine with Mobile Joystick
@@ -90,6 +104,7 @@ export class InputManager {
       this.moveVector.x = jx;
       this.moveVector.y = jy;
       this.lastFacingAngle = Math.atan2(jy, jx);
+      this.lastInputType = 'touch';
     } else if (kLen > 0) {
       this.moveVector.x = kx;
       this.moveVector.y = ky;

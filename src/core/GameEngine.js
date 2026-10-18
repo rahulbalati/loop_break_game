@@ -52,10 +52,19 @@ export class GameEngine {
     this.accumulator = 0;
     this.fixedDt = 1 / 60; // 60 FPS physics step
 
+    // High-DPI Retina resolution
+    this.dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+
+    // Ambient Menu Particles (for vibrant start screen backdrop)
+    this.ambientParticles = [];
+    this.scanlineY = 0;
+    this.hasDashedOnFloor2 = false;
+
     // UI reference
     this.ui = null;
 
     this.handleResize();
+    this.initAmbientParticles();
     window.addEventListener('resize', () => this.handleResize());
     window.addEventListener('orientationchange', () => {
       setTimeout(() => this.handleResize(), 120);
@@ -88,6 +97,25 @@ export class GameEngine {
     });
   }
 
+  initAmbientParticles() {
+    this.ambientParticles = [];
+    const colors = ['#00f0ff', '#00ffaa', '#ffd200', '#ff00aa', '#88a0d0'];
+    const w = this.virtualWidth || 1280;
+    const h = this.virtualHeight || 720;
+    for (let i = 0; i < 30; i++) {
+      this.ambientParticles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 30,
+        vy: (Math.random() - 0.5) * 30,
+        radius: 2 + Math.random() * 3,
+        color: colors[i % colors.length],
+        alpha: 0.2 + Math.random() * 0.4,
+        pulseSpeed: 1 + Math.random() * 2,
+      });
+    }
+  }
+
   setUI(uiManager) {
     this.ui = uiManager;
   }
@@ -105,13 +133,16 @@ export class GameEngine {
     this.virtualHeight = CONFIG.BASE_HEIGHT;
     this.virtualWidth = Math.round(CONFIG.BASE_HEIGHT * aspect);
 
+    // Native High-DPI buffer scaling (capped at 2x for optimal 60fps performance)
+    this.dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+
     // Fullscreen canvas
     this.canvas.style.width = '100%';
     this.canvas.style.height = '100%';
 
-    // Native buffer resolution matches virtual dimensions
-    this.canvas.width = this.virtualWidth;
-    this.canvas.height = this.virtualHeight;
+    // Native buffer resolution matches virtual dimensions * DPR
+    this.canvas.width = Math.round(this.virtualWidth * this.dpr);
+    this.canvas.height = Math.round(this.virtualHeight * this.dpr);
 
     // Update arena generator
     if (this.arenaGen) {
@@ -259,13 +290,14 @@ export class GameEngine {
     platform.gameplayStart();
   }
 
-  onPlayerDied() {
+  onPlayerDied(source = null) {
     this.state = 'GAMEOVER';
     this.input.setGameplayActive(false);
     audio.playGameOver();
 
     const timeSurvived = (performance.now() - this.runStartTime) / 1000;
     const fluxEarned = this.shardsTotalThisRun + (this.currentLevel - 1) * 3;
+    const causeOfDeath = source || (this.player && this.player.lastDamageSource) || 'Enemy Drone';
 
     saveSystem.recordRunResult({
       score: this.score,
@@ -281,6 +313,7 @@ export class GameEngine {
         score: this.score,
         floor: this.currentLevel,
         fluxEarned,
+        causeOfDeath,
       });
     }
 
@@ -292,6 +325,7 @@ export class GameEngine {
     this.input.setGameplayActive(false);
     audio.playLevelClear();
     this.particleSystem.spawnPortalBurst(this.portal.x, this.portal.y);
+    this.particleSystem.spawnCelebrationConfetti(this.virtualWidth, this.virtualHeight);
     platform.happytime();
     platform.gameplayStop();
 
@@ -327,7 +361,9 @@ export class GameEngine {
 
     // Ability Input Execution
     if (this.input.consumeDash()) {
-      this.player.dash(this.input.moveVector, this.particleSystem);
+      if (this.player.dash(this.input.moveVector, this.particleSystem)) {
+        this.hasDashedOnFloor2 = true;
+      }
     }
     if (this.input.consumePulse()) {
       this.player.pulse(this.enemies, this.particleSystem, this.shards);
@@ -349,7 +385,7 @@ export class GameEngine {
 
     // Record and Update Echo
     this.echo.record(this.player, dt);
-    this.echo.update(dt, this.player, this.particleSystem, this.screenShake, () => this.onPlayerDied());
+    this.echo.update(dt, this.player, this.particleSystem, this.screenShake, () => this.onPlayerDied('ECHO TEMPORAL REPERCUSSION'));
     const decoy = this.echo.getDecoyTarget();
 
     // Update Enemies (with mutual separation to prevent clustering)
@@ -398,7 +434,7 @@ export class GameEngine {
         this.updateHUD();
       },
       onLevelCompleted: () => this.onLevelCompleted(),
-      onPlayerDied: () => this.onPlayerDied(),
+      onPlayerDied: (source) => this.onPlayerDied(source),
     });
 
     // Fail-Safe: If all shards are collected in the arena, guarantee exit portal is open!
@@ -412,9 +448,198 @@ export class GameEngine {
     this.updateHUD();
   }
 
+  // Render Menu Ambient Cyber Atmosphere
+  renderMenuAtmosphere(ctx) {
+    const time = performance.now() * 0.001;
+    // 1. Subtle cyber scanline sweep
+    this.scanlineY = (this.scanlineY + 1.2) % this.virtualHeight;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.14)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, this.scanlineY);
+    ctx.lineTo(this.virtualWidth, this.scanlineY);
+    ctx.stroke();
+
+    // 2. Ambient drifting cyber nodes
+    for (const p of this.ambientParticles) {
+      p.x = (p.x + p.vx * 0.016 + this.virtualWidth) % this.virtualWidth;
+      p.y = (p.y + p.vy * 0.016 + this.virtualHeight) % this.virtualHeight;
+      const pulsingAlpha = p.alpha * (0.7 + 0.3 * Math.sin(time * p.pulseSpeed));
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = pulsingAlpha;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 8;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Interactive Floor 1 Onboarding & Dynamic Waypoint Beacons
+  renderOnboardingGuide(ctx) {
+    if (this.state !== 'PLAYING') return;
+
+    const time = performance.now() * 0.001;
+    const isTouch = this.input.lastInputType === 'touch' || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+
+    // Floor 1: Interactive Onboarding Beacon & Waypoint Beam
+    if (this.currentLevel === 1) {
+      ctx.save();
+
+      const uncollectedShards = this.shards ? this.shards.filter(s => !s.isCollected) : [];
+
+      if (uncollectedShards.length > 0) {
+        // Find nearest shard
+        let nearestShard = uncollectedShards[0];
+        let minDist = Math.hypot(nearestShard.x - this.player.x, nearestShard.y - this.player.y);
+        for (let i = 1; i < uncollectedShards.length; i++) {
+          const d = Math.hypot(uncollectedShards[i].x - this.player.x, uncollectedShards[i].y - this.player.y);
+          if (d < minDist) {
+            minDist = d;
+            nearestShard = uncollectedShards[i];
+          }
+        }
+
+        // Animated waypoint beam
+        const pulse = 0.6 + 0.4 * Math.sin(time * 6);
+        ctx.setLineDash([8, 8]);
+        ctx.lineDashOffset = -time * 35;
+        ctx.strokeStyle = `rgba(255, 210, 0, ${pulse * 0.85})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(this.player.x, this.player.y);
+        ctx.lineTo(nearestShard.x, nearestShard.y);
+        ctx.stroke();
+
+        // Pulsing target ring around shard
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(nearestShard.x, nearestShard.y, nearestShard.radius + 14 + Math.sin(time * 5) * 4, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffd200';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Floating label
+        ctx.font = 'bold 13px "Orbitron", "Inter", sans-serif';
+        ctx.fillStyle = '#ffd200';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ffd200';
+        ctx.shadowBlur = 8;
+        ctx.fillText('✦ HARVEST SHARD ✦', nearestShard.x, nearestShard.y - 28);
+
+        // Player movement prompt badge
+        const badgeY = this.player.y - 52;
+        const hintText = isTouch ? '🕹️ DRAG JOYSTICK TO MOVE' : 'MOVE: [W A S D] or [↑ ← ↓ →]';
+        ctx.font = 'bold 12px "Orbitron", "Inter", sans-serif';
+        const textW = ctx.measureText(hintText).width;
+        ctx.fillStyle = 'rgba(5, 8, 20, 0.85)';
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(this.player.x - textW / 2 - 12, badgeY - 14, textW + 24, 28, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 6;
+        ctx.fillText(hintText, this.player.x, badgeY + 4);
+
+      } else if (this.portal && this.portal.isUnlocked) {
+        // Emerald beacon to exit portal
+        const pulse = 0.6 + 0.4 * Math.sin(time * 6);
+        ctx.setLineDash([8, 8]);
+        ctx.lineDashOffset = -time * 35;
+        ctx.strokeStyle = `rgba(0, 255, 170, ${pulse * 0.9})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(this.player.x, this.player.y);
+        ctx.lineTo(this.portal.x, this.portal.y);
+        ctx.stroke();
+
+        // Pulsing portal ring
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(this.portal.x, this.portal.y, this.portal.radius + 18 + Math.sin(time * 5) * 6, 0, Math.PI * 2);
+        ctx.strokeStyle = '#00ffaa';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Floating label
+        ctx.font = 'bold 14px "Orbitron", "Inter", sans-serif';
+        ctx.fillStyle = '#00ffaa';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#00ffaa';
+        ctx.shadowBlur = 10;
+        ctx.fillText('⚡ ENTER PORTAL ⚡', this.portal.x, this.portal.y - this.portal.radius - 22);
+
+        // Player badge
+        const badgeY = this.player.y - 52;
+        const hintText = '⚡ PORTAL UNLOCKED — ENTER TO ADVANCE';
+        ctx.font = 'bold 12px "Orbitron", "Inter", sans-serif';
+        const textW = ctx.measureText(hintText).width;
+        ctx.fillStyle = 'rgba(5, 8, 20, 0.85)';
+        ctx.strokeStyle = '#00ffaa';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(this.player.x - textW / 2 - 12, badgeY - 14, textW + 24, 28, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#00ffaa';
+        ctx.fillText(hintText, this.player.x, badgeY + 4);
+      }
+
+      ctx.restore();
+
+    } else if (this.currentLevel === 2) {
+      // Floor 2: Prompt for Dash Ability (Invulnerability Burst)
+      if (!this.hasDashedOnFloor2 && this.player.dashCooldownTimer <= 0) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        const badgeY = this.player.y - 52;
+        const hintText = isTouch ? '⚡ TAP DASH FOR BURST INVULNERABILITY' : '⚡ PRESS [SPACE] / [SHIFT] TO DASH';
+        ctx.font = 'bold 12px "Orbitron", "Inter", sans-serif';
+        const textW = ctx.measureText(hintText).width;
+        ctx.fillStyle = 'rgba(5, 8, 20, 0.85)';
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(this.player.x - textW / 2 - 12, badgeY - 14, textW + 24, 28, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 6;
+        ctx.fillText(hintText, this.player.x, badgeY + 4);
+        ctx.restore();
+      }
+    } else if (this.currentLevel === 3) {
+      // Floor 3: The Echo Signature Warning
+      if (this.echo && this.echo.isActive && this.echo.ghost.alpha > 0.3) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 12px "Orbitron", "Inter", sans-serif';
+        ctx.fillStyle = '#ff00aa';
+        ctx.shadowColor = '#ff00aa';
+        ctx.shadowBlur = 8;
+        ctx.fillText('⚠️ LETHAL ECHO TRAIL', this.echo.ghost.x, this.echo.ghost.y - 28);
+        ctx.restore();
+      }
+    }
+  }
+
   // Render Frame
   render() {
     this.ctx.save();
+    // High-DPI Retina scaling: scales virtual coordinates to device pixels
+    if (this.dpr && this.dpr !== 1) {
+      this.ctx.scale(this.dpr, this.dpr);
+    }
 
     // Clear Canvas
     this.ctx.fillStyle = CONFIG.PALETTE.BG_DARK;
@@ -437,6 +662,11 @@ export class GameEngine {
       this.ctx.lineTo(this.virtualWidth, y);
     }
     this.ctx.stroke();
+
+    // Ambient Menu Atmosphere when on Start Screen
+    if (this.state === 'START' || this.state === 'MENU') {
+      this.renderMenuAtmosphere(this.ctx);
+    }
 
     // 2. Draw Outer Neon Arena Borders
     this.ctx.strokeStyle = CONFIG.PALETTE.WALL_BORDER;
@@ -486,6 +716,9 @@ export class GameEngine {
 
       // 8. Render Player
       this.player.render(this.ctx);
+
+      // 8b. Render Floor 1 Interactive Guidance & Waypoint Beacons
+      this.renderOnboardingGuide(this.ctx);
     }
 
     // 9. Render Particles & Shockwaves

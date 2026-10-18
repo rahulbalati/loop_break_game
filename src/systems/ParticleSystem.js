@@ -133,6 +133,28 @@ export class ParticleSystem {
     });
   }
 
+  // Celebratory Level Clear Matrix Confetti
+  spawnCelebrationConfetti(width, height) {
+    const colors = ['#00f0ff', '#00ffaa', '#ffd200', '#ff007f', '#b34dff', '#ffffff'];
+    for (let i = 0; i < 75; i++) {
+      const x = Math.random() * width;
+      const y = -10 - Math.random() * 80;
+      const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.9;
+      const speed = 140 + Math.random() * 260;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 3 + Math.random() * 4,
+        life: 2.5,
+        maxLife: 2.5,
+        drag: 0.98,
+      });
+    }
+  }
+
   update(dt) {
     // Update particles
     for (let i = this.particles.length - 1; i >= 0; i--) {

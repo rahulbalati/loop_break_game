@@ -115,11 +115,12 @@ export class EchoManager {
 
     // Collision damage (requires visible ghost alpha >= 0.5 to prevent spawn unfairness)
     if (dist < CONFIG.PLAYER.RADIUS + 12 && this.ghost.alpha >= 0.5 && !player.isDashing) {
-      const damaged = player.takeDamage(particleSystem, screenShake);
+      const source = 'ECHO TEMPORAL REPERCUSSION';
+      const damaged = player.takeDamage(particleSystem, screenShake, source);
       if (damaged) {
         particleSystem.spawnHitSparks(this.ghost.x, this.ghost.y, CONFIG.ECHO.COLOR);
         if (player.health <= 0 && onPlayerDied) {
-          onPlayerDied();
+          onPlayerDied(source);
         }
       }
     }

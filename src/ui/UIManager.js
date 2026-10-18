@@ -66,6 +66,8 @@ export class UIManager {
       overBestScore: document.getElementById('over-best-score'),
       overFloor: document.getElementById('over-floor'),
       overFluxEarned: document.getElementById('over-flux-earned'),
+      overCause: document.getElementById('over-cause'),
+      overTip: document.getElementById('over-tip'),
       btnRestartOver: document.getElementById('btn-restart-over'),
       btnShopOver: document.getElementById('btn-shop-over'),
       btnMenuOver: document.getElementById('btn-menu-over'),
@@ -411,12 +413,31 @@ export class UIManager {
     this.dom.levelClearModal.classList.add('hidden');
   }
 
-  showGameOverModal({ score, floor, fluxEarned }) {
+  showGameOverModal({ score, floor, fluxEarned, causeOfDeath }) {
     this.dom.hudDirective.classList.add('hidden');
     this.dom.overScore.innerText = score.toLocaleString();
     this.dom.overBestScore.innerText = saveSystem.data.highScore.toLocaleString();
     this.dom.overFloor.innerText = floor;
     this.dom.overFluxEarned.innerText = `+${fluxEarned}`;
+
+    const cause = (causeOfDeath || 'ENEMY HAZARD').toUpperCase();
+    if (this.dom.overCause) {
+      this.dom.overCause.innerText = cause;
+    }
+    if (this.dom.overTip) {
+      let tip = 'Tip: Collect all Energy Shards to unlock the Exit Portal and advance.';
+      if (cause.includes('ECHO')) {
+        tip = 'Temporal Warning: Retracing past movements is lethal. Maneuver in wide, outward paths!';
+      } else if (cause.includes('HUNTER')) {
+        tip = 'Survival Tip: Tap DASH (SPACE) for a supersonic burst with temporary invulnerability!';
+      } else if (cause.includes('INTERCEPTOR')) {
+        tip = 'Tactical Tip: Interceptors anticipate your vector. Change course sharply or pulse!';
+      } else if (cause.includes('SENTINEL')) {
+        tip = 'Combat Tip: Sentinels defend the portal. Use Kinetic Pulse (E / J) to knock them away!';
+      }
+      this.dom.overTip.innerText = tip;
+    }
+
     this.dom.gameOverModal.classList.remove('hidden');
   }
 
