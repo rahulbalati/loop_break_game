@@ -1,0 +1,29 @@
+{
+  "$schema": "https://bridge.playgama.com/v1/stable/schema.json",
+  "device": {
+    "useBuiltInOrientationPopup": true,
+    "supportedOrientations": [
+      "landscape"
+    ]
+  },
+  "platforms": {
+    "crazy_games": {},
+    "youtube": {}
+  },
+  "advertisement": {
+    "interstitial": {
+      "placements": [
+        { "id": "default" }
+      ],
+      "placementFallback": "default",
+      "preloadOnStart": true
+    },
+    "rewarded": {
+      "placements": [
+        { "id": "default" }
+      ],
+      "placementFallback": "default",
+      "preloadOnStart": true
+    }
+  }
+}
