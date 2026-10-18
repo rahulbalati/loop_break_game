@@ -11,9 +11,11 @@ export class ParticleSystem {
     this.shockwaves.length = 0;
   }
 
-  // Generic particle spawner
+  // Generic particle spawner — capped at MAX_PARTICLES to prevent mobile overload
   spawn({ x, y, count = 10, color = '#00f0ff', speed = 100, life = 0.5, size = 3, spread = Math.PI * 2, angle = 0 }) {
+    const MAX_PARTICLES = 250;
     for (let i = 0; i < count; i++) {
+      if (this.particles.length >= MAX_PARTICLES) break; // drop excess particles before allocation
       const a = angle - spread / 2 + Math.random() * spread;
       const spd = speed * (0.4 + Math.random() * 0.8);
       this.particles.push({
@@ -133,10 +135,12 @@ export class ParticleSystem {
     });
   }
 
-  // Celebratory Level Clear Matrix Confetti
+  // Celebratory Level Clear Matrix Confetti — reduced count on mobile for 60fps
   spawnCelebrationConfetti(width, height) {
+    const isMobile = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+    const count = isMobile ? 36 : 75;
     const colors = ['#00f0ff', '#00ffaa', '#ffd200', '#ff007f', '#b34dff', '#ffffff'];
-    for (let i = 0; i < 75; i++) {
+    for (let i = 0; i < count; i++) {
       const x = Math.random() * width;
       const y = -10 - Math.random() * 80;
       const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.9;
@@ -156,12 +160,14 @@ export class ParticleSystem {
   }
 
   update(dt) {
-    // Update particles
+    // Update particles — O(1) swap-and-pop removal (avoids O(n) splice shifts)
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt;
       if (p.life <= 0) {
-        this.particles.splice(i, 1);
+        // Swap with last element and pop — order doesn't matter for particles
+        this.particles[i] = this.particles[this.particles.length - 1];
+        this.particles.pop();
         continue;
       }
       p.x += p.vx * dt;
@@ -175,7 +181,8 @@ export class ParticleSystem {
       const sw = this.shockwaves[i];
       sw.life -= dt;
       if (sw.life <= 0) {
-        this.shockwaves.splice(i, 1);
+        this.shockwaves[i] = this.shockwaves[this.shockwaves.length - 1];
+        this.shockwaves.pop();
         continue;
       }
       const progress = 1 - sw.life / sw.maxLife;

@@ -201,9 +201,9 @@ export class GameEngine {
       }
     }
 
-    // Refresh touch joystick bounds immediately
+    // Refresh touch joystick layout (button positions, scale factors) on resize
     if (this.input) {
-      this.input.update(this.virtualWidth, this.virtualHeight);
+      this.input.updateLayout(this.virtualWidth, this.virtualHeight);
     }
   }
 
@@ -357,7 +357,7 @@ export class GameEngine {
   updatePhysics(dt) {
     if (this.state !== 'PLAYING') return;
 
-    this.input.update(this.virtualWidth, this.virtualHeight);
+    this.input.update();
 
     // Ability Input Execution
     if (this.input.consumeDash()) {
@@ -483,7 +483,13 @@ export class GameEngine {
     if (this.state !== 'PLAYING') return;
 
     const time = performance.now() * 0.001;
-    const isTouch = this.input.lastInputType === 'touch' || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+    // Cache touch detection once — never changes mid-session on a real device
+    if (this._isTouchCached === undefined) {
+      this._isTouchCached = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+    }
+    const isTouch = this._isTouchCached || this.input.lastInputType === 'touch';
+    // Badge width cache — measureText is expensive on mobile, cache by key
+    if (!this._badgeWidths) this._badgeWidths = {};
 
     // Floor 1: Interactive Onboarding Beacon & Waypoint Beam
     if (this.currentLevel === 1) {
@@ -530,11 +536,13 @@ export class GameEngine {
         ctx.shadowBlur = 8;
         ctx.fillText('✦ HARVEST SHARD ✦', nearestShard.x, nearestShard.y - 28);
 
-        // Player movement prompt badge
+        // Player movement prompt badge — cached text width (measureText expensive on mobile)
         const badgeY = this.player.y - 52;
         const hintText = isTouch ? '🕹️ DRAG JOYSTICK TO MOVE' : 'MOVE: [W A S D] or [↑ ← ↓ →]';
+        const hintKey = isTouch ? 'hint_move_touch' : 'hint_move_kb';
         ctx.font = 'bold 12px "Orbitron", "Inter", sans-serif';
-        const textW = ctx.measureText(hintText).width;
+        if (!this._badgeWidths[hintKey]) this._badgeWidths[hintKey] = ctx.measureText(hintText).width;
+        const textW = this._badgeWidths[hintKey];
         ctx.fillStyle = 'rgba(5, 8, 20, 0.85)';
         ctx.strokeStyle = '#00f0ff';
         ctx.lineWidth = 1.5;
@@ -576,11 +584,12 @@ export class GameEngine {
         ctx.shadowBlur = 10;
         ctx.fillText('⚡ ENTER PORTAL ⚡', this.portal.x, this.portal.y - this.portal.radius - 22);
 
-        // Player badge
+        // Player badge — cached text width
         const badgeY = this.player.y - 52;
         const hintText = '⚡ PORTAL UNLOCKED — ENTER TO ADVANCE';
         ctx.font = 'bold 12px "Orbitron", "Inter", sans-serif';
-        const textW = ctx.measureText(hintText).width;
+        if (!this._badgeWidths['hint_portal']) this._badgeWidths['hint_portal'] = ctx.measureText(hintText).width;
+        const textW = this._badgeWidths['hint_portal'];
         ctx.fillStyle = 'rgba(5, 8, 20, 0.85)';
         ctx.strokeStyle = '#00ffaa';
         ctx.lineWidth = 1.5;
@@ -602,8 +611,10 @@ export class GameEngine {
         ctx.textAlign = 'center';
         const badgeY = this.player.y - 52;
         const hintText = isTouch ? '⚡ TAP DASH FOR BURST INVULNERABILITY' : '⚡ PRESS [SPACE] / [SHIFT] TO DASH';
+        const hintKey = isTouch ? 'hint_dash_touch' : 'hint_dash_kb';
         ctx.font = 'bold 12px "Orbitron", "Inter", sans-serif';
-        const textW = ctx.measureText(hintText).width;
+        if (!this._badgeWidths[hintKey]) this._badgeWidths[hintKey] = ctx.measureText(hintText).width;
+        const textW = this._badgeWidths[hintKey];
         ctx.fillStyle = 'rgba(5, 8, 20, 0.85)';
         ctx.strokeStyle = '#00f0ff';
         ctx.lineWidth = 1.5;

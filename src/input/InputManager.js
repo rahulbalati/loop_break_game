@@ -72,8 +72,14 @@ export class InputManager {
     });
   }
 
-  update(virtualWidth, virtualHeight) {
+  // Called only on resize — recomputes button positions, radii and scale factors
+  updateLayout(virtualWidth, virtualHeight) {
     this.joystick.updateLayout(virtualWidth, virtualHeight);
+  }
+
+  update() {
+    // NOTE: updateLayout() is intentionally NOT called here.
+    // Layout is computed once on resize via updateLayout(), not every physics tick.
 
     // Compute Keyboard Vector (QWERTY + AZERTY + Arrows)
     let kx = 0;

@@ -254,11 +254,12 @@ export class Player {
 
     // Draw Energy Shield Ring if active
     if (this.health > 1) {
+      const t = performance.now() * 0.006;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius + 6, 0, Math.PI * 2);
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#00ffaa';
-      ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.006) * 0.25;
+      ctx.globalAlpha = 0.5 + Math.sin(t) * 0.25;
       ctx.stroke();
     }
 

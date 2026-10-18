@@ -154,7 +154,7 @@ export class EchoManager {
     }
 
     // 2. Render Pulsing Danger / Telegraph Aura
-    const pulseScale = 1.0 + Math.sin(Date.now() * 0.01) * 0.15;
+    const pulseScale = 1.0 + Math.sin(performance.now() * 0.01) * 0.15;
     ctx.beginPath();
     ctx.arc(this.ghost.x, this.ghost.y, (CONFIG.PLAYER.RADIUS + 8) * pulseScale, 0, Math.PI * 2);
     ctx.strokeStyle = CONFIG.ECHO.COLOR;

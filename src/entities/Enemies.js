@@ -121,7 +121,7 @@ export class HunterEnemy extends BaseEnemy {
     ctx.rotate(this.rotation);
 
     if (this.stunTimer > 0) {
-      ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
+      ctx.globalAlpha = 0.5 + Math.sin(performance.now() * 0.02) * 0.3;
     }
 
     // Outer Glow
@@ -213,7 +213,7 @@ export class InterceptorEnemy extends BaseEnemy {
     ctx.rotate(this.facingAngle);
 
     if (this.stunTimer > 0) {
-      ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
+      ctx.globalAlpha = 0.5 + Math.sin(performance.now() * 0.02) * 0.3;
     }
 
     // Glow
@@ -320,7 +320,7 @@ export class SentinelEnemy extends BaseEnemy {
     ctx.translate(this.x, this.y);
 
     if (this.stunTimer > 0) {
-      ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
+      ctx.globalAlpha = 0.5 + Math.sin(performance.now() * 0.02) * 0.3;
     }
 
     // Glow
