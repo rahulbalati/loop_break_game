@@ -1,41 +1,25 @@
-// LOOP//BREAK - BGMI-Style Rotary Analog Joystick & Multitouch Controller
+// LOOP//BREAK - Floating analog joystick (anywhere on the left 60%) + dash button, multitouch.
 
 export class TouchJoystick {
   constructor(canvas) {
     this.canvas = canvas;
+    this.virtualWidth = 1280;
+    this.virtualHeight = 720;
     this.isActive = false;
     this.touchId = null;
-
-    // Center base anchor (in virtual/screen pixels)
     this.baseX = 0;
     this.baseY = 0;
-    // Current thumbstick position
     this.thumbX = 0;
     this.thumbY = 0;
-
-    // Specs (Enlarged and dynamically scaled)
-    this.maxRadius = 78; // Max thumb travel distance
-    this.thumbRadius = 32;
-    this.deadZone = 9;    // Minimum movement threshold
-
-    // Output vector (-1 to 1)
+    this.maxRadius = 70;
+    this.thumbRadius = 28;
+    this.deadZone = 8;
     this.vector = { x: 0, y: 0 };
-    this.angle = 0;
-    this.intensity = 0; // 0 to 1
 
-    // Touch zones and buttons
+    this.dashButton = { x: 0, y: 0, radius: 60 };
     this.dashTouchId = null;
-    this.pulseTouchId = null;
     this.dashTriggered = false;
-    this.pulseTriggered = false;
-
-    // Button layout bounding boxes (calculated in resize)
-    this.dashButton = { x: 0, y: 0, radius: 72 };
-    this.pulseButton = { x: 0, y: 0, radius: 56 };
-
-    // Cooldown progress (0 = ready, 1 = on full cooldown)
     this.dashCooldown = 0;
-    this.pulseCooldown = 0;
     this.isTouchDevice = false;
     this.enabled = false;
     this.bindEvents();
@@ -46,172 +30,115 @@ export class TouchJoystick {
     if (!this.enabled) {
       this.resetJoystick();
       this.dashTouchId = null;
-      this.pulseTouchId = null;
     }
   }
 
+  toVirtual(touch) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: (touch.clientX - rect.left) * (this.virtualWidth / rect.width),
+      y: (touch.clientY - rect.top) * (this.virtualHeight / rect.height),
+    };
+  }
+
   bindEvents() {
-    const el = window;
-
-    const onTouchStart = (e) => {
+    const onStart = (e) => {
       this.isTouchDevice = true;
-
-      // Allow natural touch scrolling and clicks when interacting with open modals/overlays
-      if (e.target && e.target.closest && e.target.closest('.modal-panel, .overlay-layer:not(#hud)')) {
-        return;
-      }
-
-      // Do not intercept touches if gameplay is not actively running
-      if (!this.enabled) {
-        return;
-      }
-
-      const rect = this.canvas.getBoundingClientRect();
-      const scaleX = (this.virtualWidth || this.canvas.width) / rect.width;
-      const scaleY = (this.virtualHeight || this.canvas.height) / rect.height;
-
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        const screenX = (touch.clientX - rect.left) * scaleX;
-        const screenY = (touch.clientY - rect.top) * scaleY;
-
-        // Check Dash Button first with generous 1.55x touch tolerance for mobile thumbs
-        const distToDash = Math.hypot(screenX - this.dashButton.x, screenY - this.dashButton.y);
-        if (distToDash <= this.dashButton.radius * 1.55 && this.dashTouchId === null) {
+      if (!this.enabled) return;
+      // Let HUD buttons (pause) receive their own taps
+      if (e.target && e.target.closest && e.target.closest('button')) return;
+      for (const touch of e.changedTouches) {
+        const p = this.toVirtual(touch);
+        const db = this.dashButton;
+        if (this.dashTouchId === null && Math.hypot(p.x - db.x, p.y - db.y) <= db.radius * 1.5) {
           this.dashTouchId = touch.identifier;
           this.dashTriggered = true;
           e.preventDefault();
           continue;
         }
-
-        // Check Pulse Button
-        if (this.pulseUnlocked) {
-          const distToPulse = Math.hypot(screenX - this.pulseButton.x, screenY - this.pulseButton.y);
-          if (distToPulse <= this.pulseButton.radius * 1.55 && this.pulseTouchId === null) {
-            this.pulseTouchId = touch.identifier;
-            this.pulseTriggered = true;
-            e.preventDefault();
-            continue;
-          }
-        }
-
-        // Left 50% of the screen initiates the Joystick
-        if (screenX < (this.virtualWidth || this.canvas.width) * 0.5 && this.touchId === null) {
+        if (this.touchId === null && p.x < this.virtualWidth * 0.6) {
           this.touchId = touch.identifier;
           this.isActive = true;
-          this.baseX = screenX;
-          this.baseY = screenY;
-          this.thumbX = screenX;
-          this.thumbY = screenY;
-          this.updateVector(screenX, screenY);
+          this.baseX = p.x;
+          this.baseY = p.y;
+          this.updateVector(p.x, p.y);
           e.preventDefault();
         }
       }
     };
 
-    const onTouchMove = (e) => {
+    const onMove = (e) => {
       if (!this.enabled || !this.isActive) return;
-      const rect = this.canvas.getBoundingClientRect();
-      const scaleX = (this.virtualWidth || this.canvas.width) / rect.width;
-      const scaleY = (this.virtualHeight || this.canvas.height) / rect.height;
-
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === this.touchId) {
-          const screenX = (touch.clientX - rect.left) * scaleX;
-          const screenY = (touch.clientY - rect.top) * scaleY;
-          this.updateVector(screenX, screenY);
-          e.preventDefault();
+      for (const touch of e.changedTouches) {
+        if (touch.identifier !== this.touchId) continue;
+        const p = this.toVirtual(touch);
+        // Let the base follow the thumb when dragged past the ring, so direction changes stay quick
+        const dx = p.x - this.baseX, dy = p.y - this.baseY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > this.maxRadius * 1.4) {
+          const k = (dist - this.maxRadius * 1.4) / dist;
+          this.baseX += dx * k;
+          this.baseY += dy * k;
         }
+        this.updateVector(p.x, p.y);
+        e.preventDefault();
       }
     };
 
-    const onTouchEnd = (e) => {
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === this.touchId) {
-          this.resetJoystick();
-        }
-        if (touch.identifier === this.dashTouchId) {
-          this.dashTouchId = null;
-        }
-        if (touch.identifier === this.pulseTouchId) {
-          this.pulseTouchId = null;
-        }
+    const onEnd = (e) => {
+      for (const touch of e.changedTouches) {
+        if (touch.identifier === this.touchId) this.resetJoystick();
+        if (touch.identifier === this.dashTouchId) this.dashTouchId = null;
       }
-      // Safety fail-safe: if no active touches remain on screen, reset everything
       if (e.touches && e.touches.length === 0) {
         this.resetJoystick();
         this.dashTouchId = null;
-        this.pulseTouchId = null;
       }
     };
 
-    window.addEventListener('touchstart', onTouchStart, { passive: false });
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd, { passive: false });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    window.addEventListener('touchstart', onStart, { passive: false });
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onEnd, { passive: false });
+    window.addEventListener('touchcancel', onEnd, { passive: false });
   }
 
-  updateLayout(virtualWidth, virtualHeight) {
-    this.virtualWidth = virtualWidth || 1280;
-    this.virtualHeight = virtualHeight || 720;
-
-    // Dynamic Responsive Scaling for Joystick and Action Buttons
-    const scaleFactor = Math.max(0.95, Math.min(1.35, virtualHeight / 720));
-
-    // Enlarged Joystick Dimensions
-    this.maxRadius = Math.round(76 * scaleFactor);
-    this.thumbRadius = Math.round(33 * scaleFactor);
-    this.deadZone = Math.round(9 * scaleFactor);
-
-    // Responsive Margins (anchored to viewport edges with safe area padding)
-    const rightMargin = Math.max(115, Math.min(210, virtualWidth * 0.10));
-    const bottomMargin = Math.max(105, Math.min(160, virtualHeight * 0.17));
-
-    // Enlarged Buttons with proportional scaling
-    this.dashButton.radius = Math.round(Math.max(65, Math.min(85, virtualHeight * 0.11)));
-    this.dashButton.x = virtualWidth - rightMargin;
-    this.dashButton.y = virtualHeight - bottomMargin;
-
-    this.pulseButton.radius = Math.round(Math.max(52, Math.min(70, virtualHeight * 0.088)));
-    // Ergonomic orbital placement: placed slightly left-above Dash for natural thumb sweep
-    this.pulseButton.x = this.dashButton.x - 22;
-    this.pulseButton.y = this.dashButton.y - (this.dashButton.radius + this.pulseButton.radius + 24);
-
-    // Default neutral base position on bottom-left if inactive
+  updateLayout(w, h) {
+    this.virtualWidth = w;
+    this.virtualHeight = h;
+    const scale = Math.max(0.9, Math.min(1.25, h / 720));
+    this.maxRadius = Math.round(64 * scale);
+    this.thumbRadius = Math.round(26 * scale);
+    this.deadZone = Math.round(7 * scale);
+    this.dashButton.radius = Math.round(Math.max(48, Math.min(66, h * 0.09)));
+    this.dashButton.x = w - Math.max(96, Math.min(170, w * 0.085));
+    this.dashButton.y = h - Math.max(96, Math.min(150, h * 0.17));
     if (!this.isActive) {
-      const leftMargin = Math.max(135, Math.min(240, virtualWidth * 0.12));
-      this.baseX = leftMargin;
-      this.baseY = virtualHeight - bottomMargin;
+      this.baseX = Math.max(120, Math.min(200, w * 0.11));
+      this.baseY = h - Math.max(110, Math.min(160, h * 0.19));
       this.thumbX = this.baseX;
       this.thumbY = this.baseY;
     }
   }
 
-  updateVector(targetX, targetY) {
-    const dx = targetX - this.baseX;
-    const dy = targetY - this.baseY;
+  updateVector(tx, ty) {
+    const dx = tx - this.baseX;
+    const dy = ty - this.baseY;
     const dist = Math.hypot(dx, dy);
-
     if (dist < this.deadZone) {
       this.vector.x = 0;
       this.vector.y = 0;
-      this.intensity = 0;
       this.thumbX = this.baseX;
       this.thumbY = this.baseY;
       return;
     }
-
-    this.angle = Math.atan2(dy, dx);
-    const clampedDist = Math.min(dist, this.maxRadius);
-
-    this.thumbX = this.baseX + Math.cos(this.angle) * clampedDist;
-    this.thumbY = this.baseY + Math.sin(this.angle) * clampedDist;
-
-    this.intensity = (clampedDist - this.deadZone) / (this.maxRadius - this.deadZone);
-    this.vector.x = Math.cos(this.angle) * this.intensity;
-    this.vector.y = Math.sin(this.angle) * this.intensity;
+    const a = Math.atan2(dy, dx);
+    const clamped = Math.min(dist, this.maxRadius);
+    this.thumbX = this.baseX + Math.cos(a) * clamped;
+    this.thumbY = this.baseY + Math.sin(a) * clamped;
+    // Reach full speed at 70% deflection so thumbs don't have to stretch
+    const intensity = Math.min(1, (clamped - this.deadZone) / ((this.maxRadius - this.deadZone) * 0.7));
+    this.vector.x = Math.cos(a) * intensity;
+    this.vector.y = Math.sin(a) * intensity;
   }
 
   resetJoystick() {
@@ -219,120 +146,57 @@ export class TouchJoystick {
     this.touchId = null;
     this.vector.x = 0;
     this.vector.y = 0;
-    this.intensity = 0;
-    this.thumbX = this.baseX;
-    this.thumbY = this.baseY;
+    this.updateLayout(this.virtualWidth, this.virtualHeight);
   }
 
   consumeDash() {
-    if (this.dashTriggered) {
-      this.dashTriggered = false;
-      return true;
-    }
-    return false;
+    const v = this.dashTriggered;
+    this.dashTriggered = false;
+    return v;
   }
 
-  consumePulse() {
-    if (this.pulseTriggered) {
-      this.pulseTriggered = false;
-      return true;
-    }
-    return false;
-  }
-
-  setCooldowns(dashCooldown, pulseCooldown, pulseUnlocked = true) {
-    this.dashCooldown = Math.max(0, Math.min(1, dashCooldown));
-    this.pulseCooldown = Math.max(0, Math.min(1, pulseCooldown));
-    this.pulseUnlocked = pulseUnlocked;
+  setCooldown(frac) {
+    this.dashCooldown = Math.max(0, Math.min(1, frac));
   }
 
   render(ctx) {
-    // Only render touch controls during active gameplay on touch devices
     if (!this.isTouchDevice || !this.enabled) return;
-
     ctx.save();
-
-    // 1. Render Joystick Outer Ring & Thumbstick
-    const ringAlpha = this.isActive ? 0.45 : 0.22;
+    const ringA = this.isActive ? 0.5 : 0.2;
     ctx.beginPath();
     ctx.arc(this.baseX, this.baseY, this.maxRadius, 0, Math.PI * 2);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = `rgba(0, 240, 255, ${ringAlpha})`;
-    ctx.fillStyle = `rgba(10, 20, 45, ${ringAlpha * 0.7})`;
+    ctx.fillStyle = `rgba(20, 14, 40, ${ringA * 0.8})`;
     ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(168, 115, 255, ${ringA + 0.1})`;
     ctx.stroke();
 
-    // Inner dead zone marker
     ctx.beginPath();
-    ctx.arc(this.baseX, this.baseY, this.deadZone, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(0, 240, 255, ${ringAlpha * 0.5})`;
-    ctx.stroke();
-
-    // Movable thumbstick
-    const thumbAlpha = this.isActive ? 0.85 : 0.45;
-    ctx.beginPath();
-    ctx.arc(this.thumbX, this.thumbY, this.thumbRadius || 33, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(0, 240, 255, ${thumbAlpha * 0.6})`;
-    ctx.strokeStyle = `rgba(255, 255, 255, ${thumbAlpha})`;
-    ctx.lineWidth = 2.5;
+    ctx.arc(this.thumbX, this.thumbY, this.thumbRadius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(232, 255, 58, ${this.isActive ? 0.85 : 0.35})`;
     ctx.fill();
-    ctx.stroke();
 
-    // 2. Render DASH Button (Bottom-Right)
     const db = this.dashButton;
+    const ready = this.dashCooldown <= 0;
     ctx.beginPath();
     ctx.arc(db.x, db.y, db.radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(12, 18, 38, 0.65)';
+    ctx.fillStyle = ready ? 'rgba(232, 255, 58, 0.16)' : 'rgba(20, 14, 40, 0.6)';
     ctx.fill();
     ctx.lineWidth = 3;
-    ctx.strokeStyle = this.dashCooldown <= 0 ? '#00f0ff' : 'rgba(0, 240, 255, 0.3)';
+    ctx.strokeStyle = ready ? '#e8ff3a' : 'rgba(232, 255, 58, 0.3)';
     ctx.stroke();
-
-    // Radial Cooldown Swipe
-    if (this.dashCooldown > 0) {
+    if (!ready) {
       ctx.beginPath();
-      ctx.moveTo(db.x, db.y);
-      ctx.arc(db.x, db.y, db.radius - 2, -Math.PI / 2, -Math.PI / 2 + (1 - this.dashCooldown) * Math.PI * 2);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
-      ctx.fill();
+      ctx.arc(db.x, db.y, db.radius + 6, -Math.PI / 2, -Math.PI / 2 + (1 - this.dashCooldown) * Math.PI * 2);
+      ctx.strokeStyle = '#e8ff3a';
+      ctx.lineWidth = 3;
+      ctx.stroke();
     }
-
-    // DASH Icon / Label
-    ctx.fillStyle = this.dashCooldown <= 0 ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
-    ctx.font = 'bold 16px Orbitron, sans-serif';
+    ctx.fillStyle = ready ? '#e8ff3a' : 'rgba(255,255,255,0.4)';
+    ctx.font = '700 15px "Chakra Petch", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('DASH', db.x, db.y);
-
-    // 3. Render PULSE Button (Orbital above Dash)
-    if (this.pulseUnlocked) {
-      const pb = this.pulseButton;
-      ctx.beginPath();
-      ctx.arc(pb.x, pb.y, pb.radius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(12, 18, 38, 0.65)';
-      ctx.fill();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = this.pulseCooldown <= 0 ? '#b026ff' : 'rgba(176, 38, 255, 0.3)';
-      ctx.stroke();
-
-      // Cooldown swipe for pulse
-      if (this.pulseCooldown > 0) {
-        ctx.beginPath();
-        ctx.moveTo(pb.x, pb.y);
-        ctx.arc(pb.x, pb.y, pb.radius - 2, -Math.PI / 2, -Math.PI / 2 + (1 - this.pulseCooldown) * Math.PI * 2);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(176, 38, 255, 0.25)';
-        ctx.fill();
-      }
-
-      ctx.fillStyle = this.pulseCooldown <= 0 ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
-      ctx.font = 'bold 13px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('PULSE', pb.x, pb.y);
-    }
-
     ctx.restore();
   }
 }

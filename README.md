@@ -1,133 +1,94 @@
 # LOOP//BREAK
 
-> **"Your past movements shape your present challenge. Break the loop."**
+> **Every path you run becomes a past self that fights beside you.**
 
-**LOOP//BREAK** is an original, high-octane neon cyber arcade game engineered for desktop and mobile web browsers. Designed for instant loading, silky 60 FPS gameplay, and publication on **CrazyGames** under the Zrazy Game brand.
+An echo survivor-like for desktop and mobile web, built for CrazyGames. Survive ten minutes of escalating waves on the Neon Grid, beat the Loopkeeper, then push into overtime.
 
----
+## What makes it different
 
-## 🎮 Game Concept & The Signature "Echo System"
-
-In **LOOP//BREAK**, you pilot an agile, cybernetic avatar trapped inside an unstable quantum simulation. To escape, you must collect all designated Energy Shards, activate the dimensional Exit Portal, and survive across endless, increasingly hazardous floors.
-
-### The Echo System
-The central mechanic is the **Echo System**:
-- The simulation records your movement history in real-time.
-- After a short delay (2.4s base, adjustable via Upgrades), a translucent violet **Echo Ghost** spawns and replays your exact recorded trajectory.
-- **The Danger**: Colliding with your Echo damages your energy shields.
-- **The Strategy**: Hunter and Sentinel enemies can be **baited and distracted** by your Echo! By carving strategic curved paths, you can trick aggressive enemies into chasing your ghost while you slip through guarded corridors to reach energy shards or the exit portal.
-
----
-
-## 🕹️ Controls
-
-### Desktop Controls
-| Input | Action |
+| Mechanic | What it does |
 | :--- | :--- |
-| **WASD** or **Arrow Keys** | 360° Analog / Directional Movement |
-| **SPACE** | **Dash Burst** (Brief Invulnerability Frames & Speed Boost) |
-| **E** or **J** | **Kinetic Pulse** (Radial Shockwave: Knocks back & Stuns enemies) |
-| **ESC** or **P** | Pause / Settings Menu |
-| **SPACE / ENTER** | Instant Restart (on Game Over) or Continue (on Floor Clear) |
+| **Echo allies** | Your movement is recorded. Each echo replays your path a second or more behind you and fires every weapon you own. Up to 5 echoes. |
+| **Loop capture** | Your trail lingers for a few seconds. Close a loop around enemies and everything inside shatters. Elites and bosses take a chunk of max HP. |
+| **Paradox** | Charged echoes (white ring) explode when an enemy touches them, and chain into other charged echoes. |
 
-### Mobile Controls (Landscape Orientation)
-- **BGMI-Style Floating Rotary Joystick (Bottom-Left)**:
-  - Touch anywhere in the bottom-left screen zone to anchor the rotary joystick under your thumb.
-  - Smooth 360° directional vector with dead-zone dampening and spring reset.
-- **Primary DASH Button (Bottom-Right)**:
-  - Large circular touch button with real-time radial cooldown sweep.
-- **Secondary PULSE Button (Orbital)**:
-  - Positioned above Dash, unlocked at Floor 4.
-- **Simultaneous Multitouch**:
-  - Full support for moving with your left thumb while dashing or pulsing with your right thumb.
-- **Landscape Enforcer Overlay**:
-  - If a player holds their phone in portrait mode, a sleek visual overlay prompts them to rotate to landscape while automatically pausing physics and muting audio.
+Echo Eaters hunt your echoes and jam them, so protecting your past selves matters.
 
----
+## Run structure (Stage 01 · Neon Grid)
 
-## 👾 Enemy Roster & Behaviors
+- Level-up drafts every 20–60 s: pick 1 of 3 weapons or passives. Rerolls come from the Flux Lab.
+- Encirclement rings, swarm rushes, elites (drop data caches), Sentinel Prime minibosses at 2:30 / 5:00 / 7:30.
+- **The Loopkeeper** arrives at 10:00. Below 50% HP it spawns its own echo. Beat it for the stage clear, then survive overtime for bonus Flux.
+- Evolutions come from caches: max-level weapon + its paired passive (Pulse Bolt + Overclock → Singularity Bolt, Orbit Shards + Temporal Fork → Event Horizon).
+- One rewarded **Rewind** per run (full HP + area-clearing shockwave).
 
-1. **Hunter (Coral-Red Octagon)**:
-   - Direct pursuit with high acceleration and momentum. Can be juked into arena walls or lured into chasing your Echo ghost.
-2. **Interceptor (Golden-Amber Triangle)**:
-   - Predictive interceptor. Calculates your velocity vector and leads its trajectory to cut off your escape route.
-3. **Sentinel (Electric-Violet Diamond)**:
-   - Orbital perimeter patrol guarding high-value shards and the exit portal. Emits a radial radar sweep arc and aggressively charges when targets are detected.
+## Meta progression
 
----
+- **Flux** is earned every run (`src/systems/Economy.js` is the single source of truth, so the results screen always matches what is banked). Rewarded ad doubles it.
+- **Flux Lab**: 6 permanent upgrade lines.
+- **Loopers**: Cipher, Swarm (unlock: 150 loop kills), Warden (unlock: survive 5:00). Each changes how echoes behave.
+- **Colorways**: 5 cosmetic player colors.
 
-## ⚡ Progression, Overclocks & Neon Skins
+## Controls
 
-Collected Energy Shards bank permanently into **Flux Currency (⚡)** across all runs:
+| Desktop | Mobile (landscape) |
+| :--- | :--- |
+| WASD / ZQSD / arrows to move | Drag anywhere on the left 60% (floating joystick) |
+| Space / Shift / K to dash (invulnerable) | DASH button, bottom right |
+| Esc / P to pause, 1·2·3 to pick upgrades, R to reroll | Tap cards |
 
-### Cyber Lab: Stat Overclocks
-- **Phase Engine**: Reduces Dash cooldown by 12% per tier.
-- **Flux Magnet**: Expands shard collection attraction radius by +28px per tier.
-- **Kinetic Pulse**: Increases Pulse blast radius and stun duration by +15% per tier.
-- **Echo Buffer**: Extends Echo delay by +0.35s per tier, giving more room to maneuver.
+Weapons fire automatically.
 
-### Cyber Lab: Avatar Skins
-- **Cyber Cyan** (Default): High-voltage electric cyan.
-- **Synthwave Sunset**: Radiant neon magenta with solar flare glow.
-- **Cyber Emerald**: Vibrant crystalline green.
-- **Solar Flare**: Molten fiery amber.
-- **Void Specter**: Ultra-clean pure white with dark trail.
+## CrazyGames integration
 
----
+- New players land directly in gameplay; returning players get the hub.
+- SDK v3: `loadingStart/Stop`, `gameplayStart/Stop` (deduplicated), `happytime` on records, unlocks and boss kills, locale read from `user.systemInfo`.
+- Save data loads **after** SDK init and merges cloud (data module) with localStorage, keeping whichever has more progress. v1 saves are migrated (Flux carried over, old upgrades refunded, skins kept).
+- Ads: rewarded Rewind and rewarded 2× Flux; midgame ads only at the run-end break, skipped after a player's first run and throttled to one per 150 s. Every ad path has a fallback, so ad blockers never soft-lock the game.
+- No custom fullscreen button (the platform provides it). Fonts are self-hosted.
 
-## 🔊 Zero-Asset Web Audio Synthesizer
+## Project layout
 
-LOOP//BREAK has **zero external audio file dependencies**:
-- All sound effects (pentatonic shard collection chimes, filtered dash noise whooshes, 808 sub-bass pulse drops, enemy proximity alarms, shield crack impacts, and portal fanfares) are synthesized live using the browser's native **Web Audio API**.
-- Includes a procedural 107 BPM ambient cyber-bassline soundtrack with independent SFX and BGM controls.
-- Fast load times with zero CORS or 404 audio errors on web portals.
+```
+src/
+  core/      Game (state machine + loop), Run (pure simulation), SpatialHash, math
+  data/      weapons, passives, enemies, stages, characters, meta (lab/skins), icons
+  systems/   DraftSystem, Economy, SaveSystem, ParticleSystem, CrazyGamesSDK
+  render/    Renderer (canvas), SpriteCache (pre-rendered glow sprites)
+  input/     InputManager, TouchJoystick
+  ui/        UI (hub, panels, HUD, drafts, pause, revive, results)
+  audio/     AudioSynthesizer (procedural SFX + adaptive music sequencer)
+tests/
+  run.test.js   headless tests: echoes, loops, paradox, drafts, saves, economy, determinism
+  balance.js    balance bot that plays full runs and reports pacing
+```
 
----
+`Run` never touches the DOM or canvas, so the whole game can be simulated in Node.
 
-## 🚀 Publishing to CrazyGames
+## Development
 
-The project is built specifically to meet all CrazyGames requirements:
-- Sub-second cold boot (< 80 KB total static bundle).
-- Standard **CrazyGames v3 SDK** integration with safe local mock fallback.
-- `gameplayStart()` and `gameplayStop()` lifecycle triggers on level start, pause, and game over.
-- `happytime()` triggers on floor clearances.
-- Clean isolation between platform SDK and core gameplay.
-
-### Building for Release
 ```bash
-# 1. Install dependencies
-npm install --legacy-peer-deps
+npm install
+```
 
-# 2. Build production bundle
+```bash
+npm run dev
+```
+
+```bash
+npm test
+```
+
+```bash
+npm run balance -- runs=10 skill=0.4
+```
+
+`skill` is 0–1 (0.4 ≈ new player, 0.7 ≈ experienced). Add `?debug` to the local URL to expose `window.__game` for playtesting (disabled when the CrazyGames SDK is present).
+
+## Release
+
+```bash
 npm run build
 ```
 
-The resulting `dist/` folder contains everything needed:
-```
-dist/
-├── index.html
-└── assets/
-    ├── index-*.css
-    └── index-*.js
-```
-
-### Packaging for Submission
-Compress the contents of the `dist/` directory into a `.zip` archive (ensure `index.html` is in the root of the zip):
-```bash
-cd dist && zip -r ../loopbreak-crazygames-release.zip . && cd ..
-```
-Upload `loopbreak-crazygames-release.zip` directly to the **CrazyGames Developer Portal**.
-
----
-
-## 🛠️ Local Development
-
-```bash
-# Start Vite development server
-npm run dev
-
-# Preview production build locally
-npm run preview
-```
-
-Open `http://localhost:3000/` in your browser.
+Zip the contents of `dist/` (with `index.html` at the zip root) and upload to the CrazyGames Developer Portal.

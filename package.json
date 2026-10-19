@@ -6,14 +6,20 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "pack:zip": "rm -f loopbreak-crazygames-release.zip && npm run build && cd dist && zip -9 -r ../loopbreak-crazygames-release.zip . -x '.*'"
+    "pack:zip": "rm -f loopbreak-crazygames-release.zip && npm run build && cd dist && zip -9 -r ../loopbreak-crazygames-release.zip . -x '.*'",
+    "test": "node tests/run.test.js",
+    "balance": "node tests/balance.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "LOOP//BREAK - an echo survivor-like for CrazyGames",
   "devDependencies": {
     "esbuild": "^0.28.2",
     "vite": "^8.3.4"
+  },
+  "dependencies": {
+    "@fontsource/chakra-petch": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0"
   }
 }

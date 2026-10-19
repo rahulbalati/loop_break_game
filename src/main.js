@@ -1,50 +1,46 @@
-// LOOP//BREAK - Main Entry Point & Initialization
+// LOOP//BREAK - Entry point
+import '@fontsource/chakra-petch/latin-500.css';
+import '@fontsource/chakra-petch/latin-700.css';
+import '@fontsource/ibm-plex-mono/latin-500.css';
+import '@fontsource/ibm-plex-mono/latin-700.css';
+import './style.css';
 
-import { GameEngine } from './core/GameEngine.js';
-import { UIManager } from './ui/UIManager.js';
+import { Game } from './core/Game.js';
 import { platform } from './systems/CrazyGamesSDK.js';
+import { saveSystem } from './systems/SaveSystem.js';
 import { audio } from './audio/AudioSynthesizer.js';
 
-window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Initialize CrazyGames SDK v3 first with safety fallback
+async function boot() {
   try {
     await platform.init();
   } catch (e) {
     console.warn('Platform init issue', e);
   }
-
-  // 2. Signal CrazyGames SDK that loading sequence has begun
   platform.loadingStart();
 
+  // Save must load after the SDK so the cloud data module is available
+  saveSystem.init();
+
   const canvas = document.getElementById('game-canvas');
-  if (!canvas) {
-    console.error('Canvas element #game-canvas not found!');
-    return;
-  }
+  const game = new Game(canvas);
+  game.start();
 
-  // 3. Initialize Game Engine & UI immediately
-  const engine = new GameEngine(canvas);
-  const ui = new UIManager(engine);
-  engine.setUI(ui);
-
-  // 4. Start 60 FPS Game Loop
-  engine.startLoop();
-
-  // 5. Signal CrazyGames that loading is finished and game is ready
   platform.loadingStop();
 
-  // 4. Global user gesture listener to unlock Web Audio on iOS Safari and mobile browsers
-  const unlockAudio = () => {
+  // Unlock Web Audio on the first user gesture (required on iOS / mobile browsers)
+  const unlock = () => {
     audio.ensureContext();
-    window.removeEventListener('pointerdown', unlockAudio);
-    window.removeEventListener('keydown', unlockAudio);
-    window.removeEventListener('touchstart', unlockAudio);
-    window.removeEventListener('touchend', unlockAudio);
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+    window.removeEventListener('touchend', unlock);
   };
-  window.addEventListener('pointerdown', unlockAudio, { passive: true });
-  window.addEventListener('keydown', unlockAudio, { passive: true });
-  window.addEventListener('touchstart', unlockAudio, { passive: true });
-  window.addEventListener('touchend', unlockAudio, { passive: true });
+  window.addEventListener('pointerdown', unlock, { passive: true });
+  window.addEventListener('keydown', unlock, { passive: true });
+  window.addEventListener('touchend', unlock, { passive: true });
 
-  console.log('[LOOP//BREAK] System initialized. Ready to break the loop.');
-});
+  // Debug hook for local playtesting only
+  if (!platform.hasSDK && /[?&]debug\b/.test(location.search)) window.__game = game;
+}
+
+if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', boot);
+else boot();

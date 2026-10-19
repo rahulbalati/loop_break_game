@@ -1,226 +1,73 @@
-// LOOP//BREAK - Game Configuration & Balance Parameters
+// LOOP//BREAK - Global tuning constants. Content (weapons, enemies, stages) lives in src/data/.
 
 export const CONFIG = {
-  // Dynamic Virtual Resolution System (adapts dynamically to any mobile or desktop screen)
-  BASE_HEIGHT: 720,
-  MIN_WIDTH: 960,
-  MAX_WIDTH: 1920,
+  // Virtual resolution: height adapts between these bounds so small iframes (800x450) stay readable
+  MIN_VIRTUAL_HEIGHT: 560,
+  MAX_VIRTUAL_HEIGHT: 720,
+  FIXED_DT: 1 / 60,
 
-  // Player Specs
   PLAYER: {
-    RADIUS: 16,
-    BASE_SPEED: 320,
-    BASE_HEALTH: 3,
-    DASH_SPEED: 960,
-    DASH_DURATION: 0.18, // seconds
-    BASE_DASH_COOLDOWN: 1.25, // seconds
-    BASE_MAGNET_RADIUS: 45,
-    INVULNERABLE_DURATION: 1.0, // seconds on hit
+    RADIUS: 14,
+    ACCEL: 14, // velocity smoothing factor
+    INVULN_TIME: 0.55,
+    DASH_SPEED: 860,
+    DASH_TIME: 0.16,
+    DASH_COOLDOWN: 1.6,
+    BASE_MAGNET: 120,
   },
 
-  // Pulse Ability Specs
-  PULSE: {
-    BASE_RADIUS: 175,
-    BASE_COOLDOWN: 6.0,
-    STUN_DURATION: 1.8, // seconds
-    KNOCKBACK_FORCE: 450,
-    DURATION: 0.25, // visual shockwave expansion
-  },
-
-  // Echo System Specs
   ECHO: {
-    RECORD_FREQUENCY_HZ: 60,
-    BASE_DELAY: 2.4, // seconds of movement recorded before ghost playback begins
-    MAX_ECHOES: 2,
-    COLOR: '#b026ff',
-    TRAIL_ALPHA: 0.6,
-    DANGER_DISTANCE: 40,
-    DECOY_ATTRACT_RADIUS: 240, // distance within which enemies may get lured by echo
+    HISTORY_SECONDS: 12,
+    HISTORY_HZ: 60,
+    FIRST_DELAY: 1.5,
+    SPACING: 1.05,
+    RADIUS: 13,
+    MAX: 5,
+    PARADOX_COOLDOWN: 5.5,
+    PARADOX_RADIUS: 105,
+    PARADOX_DAMAGE: 55,
   },
 
-  // Enemies Specs
-  ENEMIES: {
-    HUNTER: {
-      RADIUS: 17,
-      SPEED: 185,
-      COLOR: '#ff2a5f',
-      SHAPE: 'octagon',
-      POINTS: 100,
-    },
-    INTERCEPTOR: {
-      RADIUS: 16,
-      SPEED: 215,
-      COLOR: '#ff9900',
-      SHAPE: 'triangle',
-      PREDICTION_TIME: 0.7,
-      POINTS: 150,
-    },
-    SENTINEL: {
-      RADIUS: 20,
-      SPEED: 110,
-      COLOR: '#a855f7',
-      SHAPE: 'diamond',
-      SCAN_RADIUS: 160,
-      POINTS: 200,
-    }
+  LOOP: {
+    TRAIL_SECONDS: 3.4,
+    SAMPLE_DIST: 9,
+    MIN_AREA: 4200,
+    COOLDOWN: 0.3,
+    ELITE_DAMAGE_PCT: 0.35,
+    BOSS_DAMAGE_PCT: 0.04,
   },
 
-  // Shards & Portals
-  SHARD: {
-    RADIUS: 10,
-    COLOR: '#ffd200',
-    PULSE_SPEED: 4,
-    POINTS: 50,
+  RUN: {
+    MAX_WEAPONS: 5,
+    MAX_PASSIVES: 5,
+    MAX_ENEMIES: 280,
+    MAX_GEMS: 320,
+    REVIVES: 1,
   },
 
-  PORTAL: {
-    RADIUS: 30,
-    COLOR_LOCKED: '#3a3f58',
-    COLOR_UNLOCKED: '#00ffaa',
-    ROTATION_SPEED: 2.5,
+  // Midgame ads are only requested at natural breaks and never more often than this
+  MIN_SECONDS_BETWEEN_MIDGAME_ADS: 150,
+
+  COLORS: {
+    BG: '#07060d',
+    GRID: 'rgba(120, 92, 255, 0.10)',
+    GRID_MAJOR: 'rgba(120, 92, 255, 0.22)',
+    PLAYER: '#3df5ff',
+    ECHO: '#a873ff',
+    ECHO_CHARGED: '#f2e9ff',
+    TRAIL: '#a873ff',
+    ENEMY_BULLET: '#ff5577',
+    XP_SMALL: '#3df5ff',
+    XP_MED: '#7dff6a',
+    XP_LARGE: '#ff5cf0',
+    FLUX: '#ffc83d',
+    HEAL: '#ff4d6d',
   },
-
-  // Combo & Scoring
-  COMBO: {
-    TIMEOUT: 4.0, // seconds between shard collections to maintain combo
-    MAX_MULTIPLIER: 4.0,
-    STEP: 0.5,
-  },
-
-  // Permanent Upgrades (Overclocks)
-  UPGRADES: [
-    {
-      id: 'phase_engine',
-      name: 'Phase Engine',
-      description: 'Reduces Dash cooldown by 15% per tier',
-      baseCost: 20,
-      costMult: 1.8,
-      maxLevel: 5,
-      effect: (level) => 1 - level * 0.12, // multiplier on dash cooldown
-    },
-    {
-      id: 'flux_magnet',
-      name: 'Flux Magnet',
-      description: 'Increases Shard collection radius by 25px per tier',
-      baseCost: 15,
-      costMult: 1.7,
-      maxLevel: 5,
-      effect: (level) => level * 28, // added to magnet radius
-    },
-    {
-      id: 'kinetic_pulse',
-      name: 'Kinetic Pulse',
-      description: 'Increases Pulse radius & stun duration by 15%',
-      baseCost: 25,
-      costMult: 1.8,
-      maxLevel: 5,
-      effect: (level) => 1 + level * 0.15,
-    },
-    {
-      id: 'echo_stabilizer',
-      name: 'Echo Buffer',
-      description: 'Adds +0.3s delay to your Echo, giving more room to maneuver',
-      baseCost: 30,
-      costMult: 2.0,
-      maxLevel: 4,
-      effect: (level) => level * 0.35, // added seconds to echo delay
-    }
-  ],
-
-  // Unlockable Neon Skins
-  SKINS: [
-    {
-      id: 'cyan_default',
-      name: 'Cyber Cyan',
-      cost: 0,
-      color: '#00f0ff',
-      glow: '#00b4d8',
-      trail: 'rgba(0, 240, 255, 0.4)',
-    },
-    {
-      id: 'synthwave',
-      name: 'Synthwave Sunset',
-      cost: 50,
-      color: '#ff007f',
-      glow: '#ffd200',
-      trail: 'rgba(255, 0, 127, 0.4)',
-    },
-    {
-      id: 'cyber_emerald',
-      name: 'Cyber Emerald',
-      cost: 100,
-      color: '#00ffaa',
-      glow: '#00cc88',
-      trail: 'rgba(0, 255, 170, 0.4)',
-    },
-    {
-      id: 'solar_flare',
-      name: 'Solar Flare',
-      cost: 175,
-      color: '#ff7700',
-      glow: '#ffcc00',
-      trail: 'rgba(255, 119, 0, 0.4)',
-    },
-    {
-      id: 'void_ghost',
-      name: 'Void Specter',
-      cost: 300,
-      color: '#f0f4f8',
-      glow: '#8b5cf6',
-      trail: 'rgba(240, 244, 248, 0.5)',
-    }
-  ],
-
-  // Visual Palette
-  PALETTE: {
-    BG_DARK: '#070814',
-    GRID_LINE: 'rgba(30, 41, 79, 0.35)',
-    WALL_BORDER: '#1e284a',
-    WALL_GLOW: 'rgba(0, 240, 255, 0.2)',
-    HAZARD_ZONE: 'rgba(255, 42, 95, 0.25)',
-    TEXT_PRIMARY: '#e2e8f0',
-    TEXT_ACCENT: '#00f0ff',
-    SHIELD_ON: '#00ffaa',
-    SHIELD_OFF: '#334155',
-  },
-
-  // Sector Milestones & Checkpoint System (Option 1)
-  SECTORS: [
-    {
-      id: 'sector_1',
-      name: 'Alpha Void',
-      startFloor: 1,
-      unlockFloorReq: 1,
-      baselineScore: 0,
-      badge: 'SECTOR 1 (FLOOR 1)',
-      desc: 'Full Simulation Run · Max Leaderboard Multiplier',
-    },
-    {
-      id: 'sector_2',
-      name: 'Neon Core',
-      startFloor: 6,
-      unlockFloorReq: 6,
-      baselineScore: 1500,
-      badge: 'SECTOR 2 (FLOOR 6)',
-      desc: 'Quick Drop · Starts at Floor 6 (+1500 PTS)',
-    },
-    {
-      id: 'sector_3',
-      name: 'Cyber Void',
-      startFloor: 11,
-      unlockFloorReq: 11,
-      baselineScore: 4000,
-      badge: 'SECTOR 3 (FLOOR 11)',
-      desc: 'High Intensity · Starts at Floor 11 (+4000 PTS)',
-    },
-    {
-      id: 'sector_4',
-      name: 'The Abyss',
-      startFloor: 16,
-      unlockFloorReq: 16,
-      baselineScore: 8000,
-      badge: 'SECTOR 4 (FLOOR 16)',
-      desc: 'Hyper Overdrive · Starts at Floor 16 (+8000 PTS)',
-    },
-  ],
 };
+
+// XP required to go from `level` to `level + 1`
+export function xpForLevel(level) {
+  if (level <= 1) return 4;
+  const late = level > 25 ? Math.pow(level - 25, 2) * 0.9 : 0; // keeps late drafts from becoming constant
+  return Math.round(4 + (level - 1) * 2.4 + Math.pow(level - 1, 1.75) * 0.3 + late);
+}

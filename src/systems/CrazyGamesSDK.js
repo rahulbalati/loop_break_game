@@ -10,33 +10,42 @@ export class CrazyGamesSDK {
     this.pendingLoadingStop = false;
     this.isAdPlaying = false;
     this.initPromise = null;
+    this.isGameplayActive = false;
+    this.lastMidgameAdAt = 0;
+    this.locale = 'en-US';
+  }
+
+  get sdk() {
+    return typeof window !== 'undefined' ? window.CrazyGames?.SDK : undefined;
   }
 
   async init() {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
-      if (typeof window !== 'undefined' && window.CrazyGames && window.CrazyGames.SDK) {
+      if (this.sdk) {
         try {
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('CrazyGames SDK init timeout fallback')), 1500)
           );
-          await Promise.race([window.CrazyGames.SDK.init(), timeoutPromise]);
+          await Promise.race([this.sdk.init(), timeoutPromise]);
           this.hasSDK = true;
           this.isInitialized = true;
           console.log('[CrazyGames] SDK v3 initialized successfully');
 
-          // Platform Master Audio Mute Settings Sync
-          const initialMute = window.CrazyGames.SDK.game?.settings?.muteAudio;
+          // Platform master audio mute sync
+          const initialMute = this.sdk.game?.settings?.muteAudio;
           if (typeof initialMute === 'boolean') {
             audio.setSdkMute(initialMute);
           }
-
-          window.CrazyGames.SDK.game?.addSettingsChangeListener?.((settings) => {
+          this.sdk.game?.addSettingsChangeListener?.((settings) => {
             if (typeof settings?.muteAudio === 'boolean') {
               audio.setSdkMute(settings.muteAudio);
             }
           });
+
+          const sdkLocale = this.sdk.user?.systemInfo?.locale;
+          if (typeof sdkLocale === 'string' && sdkLocale) this.locale = sdkLocale;
         } catch (err) {
           console.warn('[CrazyGames] SDK init skipped (local/standalone fallback)', err.message);
           this.hasSDK = false;
@@ -55,9 +64,8 @@ export class CrazyGamesSDK {
   loadingStart() {
     if (this.hasLoadingStarted) return;
     this.hasLoadingStarted = true;
-
     try {
-      window.CrazyGames?.SDK?.game?.loadingStart();
+      this.sdk?.game?.loadingStart();
     } catch (_) {}
 
     if (this.pendingLoadingStop) {
@@ -68,34 +76,33 @@ export class CrazyGamesSDK {
 
   loadingStop() {
     if (this.hasLoadingStopped) return;
-
     if (!this.hasLoadingStarted) {
       this.pendingLoadingStop = true;
       return;
     }
-
     this.hasLoadingStopped = true;
     try {
-      window.CrazyGames?.SDK?.game?.loadingStop();
+      this.sdk?.game?.loadingStop();
     } catch (_) {}
   }
 
   gameplayStart() {
     // Safety requirement: loadingStop must precede gameplayStart
-    if (!this.hasLoadingStopped) {
-      this.loadingStop();
-    }
-
+    if (!this.hasLoadingStopped) this.loadingStop();
+    if (this.isGameplayActive) return;
+    this.isGameplayActive = true;
     try {
-      window.CrazyGames?.SDK?.game?.gameplayStart();
+      this.sdk?.game?.gameplayStart();
     } catch (e) {
       console.warn('[CrazyGames] gameplayStart error', e);
     }
   }
 
   gameplayStop() {
+    if (!this.isGameplayActive) return;
+    this.isGameplayActive = false;
     try {
-      window.CrazyGames?.SDK?.game?.gameplayStop();
+      this.sdk?.game?.gameplayStop();
     } catch (e) {
       console.warn('[CrazyGames] gameplayStop error', e);
     }
@@ -103,22 +110,24 @@ export class CrazyGamesSDK {
 
   happytime() {
     try {
-      window.CrazyGames?.SDK?.game?.happytime();
+      this.sdk?.game?.happytime();
     } catch (e) {
       console.warn('[CrazyGames] happytime error', e);
     }
   }
 
-  // --- Data Module (CrazyGames Cloud Save with LocalStorage Fallback) ---
-  getItem(key) {
-    if (this.isInitialized) {
-      try {
-        if (window.CrazyGames?.SDK?.data) {
-          const val = window.CrazyGames.SDK.data.getItem(key);
-          if (val !== null && val !== undefined) return val;
-        }
-      } catch (_) {}
+  // --- Data Module (CrazyGames cloud save). Only meaningful after init(). ---
+  getCloudItem(key) {
+    if (!this.hasSDK) return null;
+    try {
+      const val = this.sdk?.data?.getItem(key);
+      return val === undefined ? null : val;
+    } catch (_) {
+      return null;
     }
+  }
+
+  getLocalItem(key) {
     try {
       return localStorage.getItem(key);
     } catch (_) {
@@ -127,11 +136,9 @@ export class CrazyGamesSDK {
   }
 
   setItem(key, value) {
-    if (this.isInitialized) {
+    if (this.hasSDK) {
       try {
-        if (window.CrazyGames?.SDK?.data) {
-          window.CrazyGames.SDK.data.setItem(key, value);
-        }
+        this.sdk?.data?.setItem(key, value);
       } catch (_) {}
     }
     try {
@@ -139,44 +146,40 @@ export class CrazyGamesSDK {
     } catch (_) {}
   }
 
-  // --- Midgame Interstitial Ad (SDK v3 format with complete audio muting) ---
-  requestMidgameAd(onComplete) {
-    if (this.isAdPlaying) {
+  // --- Midgame ad: only at natural breaks (run end). Skips silently if one played recently. ---
+  requestMidgameAd(onComplete, minSecondsBetween = 0) {
+    const now = Date.now();
+    if (this.isAdPlaying || (this.lastMidgameAdAt && now - this.lastMidgameAdAt < minSecondsBetween * 1000)) {
       if (onComplete) onComplete();
       return;
     }
+    this.lastMidgameAdAt = now;
     this.isAdPlaying = true;
     let completed = false;
 
     const finish = () => {
-      if (!completed) {
-        completed = true;
-        this.isAdPlaying = false;
-        audio.setSdkMute(false);
-        if (onComplete) onComplete();
-      }
+      if (completed) return;
+      completed = true;
+      this.isAdPlaying = false;
+      audio.setSdkMute(false);
+      if (onComplete) onComplete();
     };
 
-    if (!this.hasSDK || !window.CrazyGames?.SDK?.ad?.requestAd) {
-      // Mock ad delay for local/offline testing
-      setTimeout(() => finish(), 250);
+    if (!this.hasSDK || !this.sdk?.ad?.requestAd) {
+      setTimeout(finish, 150);
       return;
     }
 
     try {
       this.gameplayStop();
-      window.CrazyGames.SDK.ad.requestAd('midgame', {
-        adStarted: () => {
-          audio.setSdkMute(true);
-        },
-        adFinished: () => {
-          finish();
-        },
+      this.sdk.ad.requestAd('midgame', {
+        adStarted: () => audio.setSdkMute(true),
+        adFinished: finish,
         adError: (err) => {
           console.warn('[CrazyGames] Midgame ad notice / unfilled:', err);
           finish();
-        }
-      }).catch((e) => {
+        },
+      })?.catch?.((e) => {
         console.warn('[CrazyGames] Midgame ad request caught error', e);
         finish();
       });
@@ -186,55 +189,48 @@ export class CrazyGamesSDK {
     }
   }
 
-  // Backward compatibility alias
-  requestMidrollAd(onStart, onEnd) {
-    if (onStart) onStart();
-    this.requestMidgameAd(onEnd);
-  }
-
-  // --- Rewarded Video Ad (SDK v3 format with audio muting) ---
+  // --- Rewarded ad. onFail fires on adblock / no fill so the game never soft-locks. ---
   requestRewardedAd(onReward, onFail) {
-    if (this.isAdPlaying) return;
+    if (this.isAdPlaying) {
+      if (onFail) onFail();
+      return;
+    }
     this.isAdPlaying = true;
     let completed = false;
     let rewarded = false;
 
     const finish = () => {
-      if (!completed) {
-        completed = true;
-        this.isAdPlaying = false;
-        audio.setSdkMute(false);
-        if (rewarded) {
-          if (onReward) onReward();
-        } else {
-          if (onFail) onFail();
-        }
+      if (completed) return;
+      completed = true;
+      this.isAdPlaying = false;
+      audio.setSdkMute(false);
+      if (rewarded) {
+        if (onReward) onReward();
+      } else if (onFail) {
+        onFail();
       }
     };
 
-    if (!this.hasSDK || !window.CrazyGames?.SDK?.ad?.requestAd) {
-      // Mock reward immediately in standalone/dev mode
+    if (!this.hasSDK || !this.sdk?.ad?.requestAd) {
+      // Local/dev mode: grant the reward so the flow can be tested
       rewarded = true;
-      setTimeout(() => finish(), 300);
+      setTimeout(finish, 300);
       return;
     }
 
     try {
       this.gameplayStop();
-      window.CrazyGames.SDK.ad.requestAd('rewarded', {
-        adStarted: () => {
-          audio.setSdkMute(true);
-        },
+      this.sdk.ad.requestAd('rewarded', {
+        adStarted: () => audio.setSdkMute(true),
         adFinished: () => {
           rewarded = true;
           finish();
         },
         adError: (err) => {
           console.warn('[CrazyGames] Rewarded ad failed / unfilled:', err);
-          rewarded = false;
           finish();
-        }
-      }).catch((e) => {
+        },
+      })?.catch?.((e) => {
         console.warn('[CrazyGames] Rewarded ad catch error', e);
         finish();
       });
