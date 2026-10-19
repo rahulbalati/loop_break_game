@@ -261,5 +261,24 @@ test('3-minute simulated run stays numerically sane', () => {
   assert(run.kills > 0, 'bot killed something');
 });
 
+console.log('\nRefresh-rate consistency');
+test('movement and echo delay match at 60, 120 and 144 Hz', () => {
+  const play = (hz) => {
+    const run = quietRun();
+    run.gainXp(run.xpNeed);
+    const frames = Math.round(4 * hz);
+    for (let i = 0; i < frames; i++) {
+      const t = i / hz;
+      run.update(1 / hz, { x: Math.cos(t * 2), y: Math.sin(t * 2), dash: false });
+    }
+    return { x: run.player.x, y: run.player.y, ex: run.echoes[0].x, ey: run.echoes[0].y, time: run.time };
+  };
+  const a = play(60), b = play(120), c = play(144);
+  for (const o of [b, c]) {
+    assert(Math.hypot(o.x - a.x, o.y - a.y) < 6, `player drifted ${Math.hypot(o.x - a.x, o.y - a.y).toFixed(1)}px`);
+    assert(Math.hypot(o.ex - a.ex, o.ey - a.ey) < 8, `echo drifted ${Math.hypot(o.ex - a.ex, o.ey - a.ey).toFixed(1)}px`);
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exitCode = 1;

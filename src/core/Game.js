@@ -26,9 +26,12 @@ export class Game {
     this.lastSummary = null;
     this.lastFlux = 0;
     this.time = 0;
-    this.accumulator = 0;
     this.lastFrame = 0;
     this.slowFrames = 0;
+    this.isPortrait = false;
+    // A run stays frozen until the player first moves, so nobody takes damage before they are looking
+    // (and the iframe has keyboard focus).
+    this.awaitingInput = false;
     this.lowQuality = false;
     this.isTouch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     // Show the joystick and DASH button before the first touch so mobile players see the controls
@@ -67,7 +70,7 @@ export class Game {
     const cssH = window.innerHeight || 720;
     const vh = Math.round(Math.max(CONFIG.MIN_VIRTUAL_HEIGHT, Math.min(CONFIG.MAX_VIRTUAL_HEIGHT, cssH * 1.25)));
     const vw = Math.round(vh * (cssW / cssH));
-    const maxDpr = this.lowQuality ? 1 : 2;
+    const maxDpr = this.lowQuality ? 1 : this.isTouch ? 1.5 : 2;
     const dpr = Math.min(maxDpr, (window.devicePixelRatio || 1) * (cssH / vh));
     this.viewW = vw;
     this.viewH = vh;
@@ -79,7 +82,17 @@ export class Game {
     }
     const portrait = this.isTouch && cssH > cssW;
     this.ui?.setRotatePrompt(portrait);
-    if (portrait && this.state === 'RUN') this.pause();
+    const wasPortrait = this.isPortrait;
+    this.isPortrait = portrait;
+    if (portrait && this.state === 'RUN') {
+      this.pause();
+      this.pausedByRotation = true;
+    } else if (!portrait && wasPortrait && this.pausedByRotation && this.state === 'PAUSED') {
+      // Rotating back resumes straight away; the run waits for the first move so nothing hits a player who is still adjusting their grip
+      this.pausedByRotation = false;
+      this.awaitingInput = true;
+      this.resume();
+    }
   }
 
   // ---------- Flow ----------
@@ -98,12 +111,14 @@ export class Game {
       skinColor: skin && skin.color,
       showDamageNumbers: d.settings.damageNumbers,
     });
+    this.run.particles.max = this.particleCap();
     this.renderer.prewarm(ENEMIES, this.run.player.color);
     this.draftQueue = [];
     this.currentDraft = null;
     this.renderer.camX = 0;
     this.renderer.camY = 0;
     this.hintState = { moved: false };
+    this.awaitingInput = true;
     this.state = 'RUN';
     this.ui.showHud(this.run);
     this.input.setGameplayActive(true);
@@ -111,6 +126,10 @@ export class Game {
     audio.setMusic('run');
     audio.setIntensity(0);
     platform.gameplayStart();
+    if (this.isPortrait) {
+      this.pause();
+      this.pausedByRotation = true;
+    }
   }
 
   pause() {
@@ -122,7 +141,8 @@ export class Game {
   }
 
   resume() {
-    if (this.state !== 'PAUSED') return;
+    if (this.state !== 'PAUSED' || this.isPortrait) return;
+    this.pausedByRotation = false;
     this.ui.hidePause();
     this.state = 'RUN';
     this.input.setGameplayActive(true);
@@ -340,7 +360,8 @@ export class Game {
     let hint = null;
     if (!this.hintState.moved) {
       if (Math.hypot(run.player.vx, run.player.vy) > 60 && run.time > 1.5) this.hintState.moved = true;
-      else hint = this.isTouch ? '<b>DRAG</b> anywhere on the left to move' : '<b>WASD</b> / <b>ARROWS</b> to move — weapons fire on their own';
+      else if (this.awaitingInput) hint = this.isTouch ? '<b>DRAG</b> on the left side to start moving' : 'Press <b>WASD</b> / <b>ARROWS</b> to start — weapons fire on their own';
+      else hint = this.isTouch ? '<b>DRAG</b> on the left side to move — weapons fire on their own' : '<b>WASD</b> / <b>ARROWS</b> to move — weapons fire on their own';
     } else if (!tips.loop && run.echoOnline && run.time > 12) {
       hint = '<b>CIRCLE</b> around enemies to close a loop — everything inside <b>shatters</b>';
     } else if (tips.loop && !tips.paradox && run.stats.echoCount > 0 && run.time > 40) {
@@ -359,21 +380,27 @@ export class Game {
     this.trackPerformance(dt);
 
     if (this.state === 'RUN') {
-      this.accumulator += dt;
-      const step = CONFIG.FIXED_DT;
-      while (this.accumulator >= step && this.state === 'RUN') {
-        this.input.update();
-        if (this.input.consumePause()) {
-          this.pause();
-          break;
-        }
-        const mv = this.input.moveVector;
-        this.run.update(step, { x: mv.x, y: mv.y, dash: this.input.consumeDash() });
-        this.accumulator -= step;
-        this.processEvents();
-        if (this.state === 'RUN' && (this.run.pendingLevelUps > 0 || this.draftQueue.length > 0)) this.openNextDraft();
+      this.input.update();
+      if (this.awaitingInput && (Math.hypot(this.input.moveVector.x, this.input.moveVector.y) > 0.1 || this.input.joystick.isActive)) {
+        this.awaitingInput = false;
       }
-      if (this.state !== 'RUN') this.accumulator = 0;
+      if (this.input.consumePause()) {
+        this.pause();
+      } else if (!this.awaitingInput) {
+        // Simulate in equal substeps no longer than FIXED_DT: physics stays consistent at any refresh
+        // rate and high-refresh screens get a fresh simulation state every rendered frame.
+        const steps = Math.max(1, Math.ceil(dt / CONFIG.FIXED_DT - 0.01));
+        const step = dt / steps;
+        const dash = this.input.consumeDash();
+        for (let i = 0; i < steps && this.state === 'RUN'; i++) {
+          const mv = this.input.moveVector;
+          this.run.update(step, { x: mv.x, y: mv.y, dash: dash && i === 0 });
+          this.processEvents();
+          if (this.state === 'RUN' && (this.run.pendingLevelUps > 0 || this.draftQueue.length > 0)) this.openNextDraft();
+        }
+      } else {
+        this.input.consumeDash();
+      }
       if (this.run) {
         this.ui.updateHud(this.run);
         if (this.state === 'RUN') this.updateHints();
@@ -399,6 +426,10 @@ export class Game {
     requestAnimationFrame((t) => this.frame(t));
   }
 
+  particleCap() {
+    return this.lowQuality ? 200 : this.isTouch ? 340 : 520;
+  }
+
   // Drops to 1x resolution if the device can't hold ~45fps
   trackPerformance(dt) {
     if (this.lowQuality || this.state !== 'RUN') return;
@@ -406,6 +437,7 @@ export class Game {
     else this.slowFrames = Math.max(0, this.slowFrames - 0.5);
     if (this.slowFrames > 90) {
       this.lowQuality = true;
+      if (this.run) this.run.particles.max = this.particleCap();
       this.handleResize();
     }
   }

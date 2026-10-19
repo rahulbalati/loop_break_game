@@ -55,6 +55,7 @@ export class Run {
     // Movement history ring buffer: x, y, facingX, facingY
     this.history = new Float32Array(HIST_LEN * 4);
     this.histHead = 0;
+    this.histAccum = 0; // history is sampled at a fixed HISTORY_HZ regardless of the update step
     this.histCount = 0;
     this.echoes = [];
     for (let i = 0; i < CONFIG.ECHO.MAX; i++) {
@@ -158,7 +159,15 @@ export class Run {
 
     this.time += dt;
     this.updatePlayer(dt, input);
-    this.recordHistory();
+    this.histAccum += dt;
+    const histStep = 1 / CONFIG.ECHO.HISTORY_HZ;
+    let recordedHistory = false;
+    while (this.histAccum >= histStep - 1e-9) {
+      this.histAccum -= histStep;
+      this.recordHistory();
+      recordedHistory = true;
+    }
+    this.recordedHistory = recordedHistory;
     this.updateEchoes(dt);
     this.updateTrail(dt);
     this.updateDirector(dt);
@@ -598,11 +607,13 @@ export class Run {
 
   updateBoss(e, dt) {
     // Record boss path so its phase-2 echo can replay it
-    const i = e.bossHead * 2;
-    e.bossHist[i] = e.x;
-    e.bossHist[i + 1] = e.y;
-    e.bossHead = (e.bossHead + 1) % BOSS_HIST_LEN;
-    e.bossCount = Math.min(BOSS_HIST_LEN, e.bossCount + 1);
+    if (this.recordedHistory) {
+      const i = e.bossHead * 2;
+      e.bossHist[i] = e.x;
+      e.bossHist[i + 1] = e.y;
+      e.bossHead = (e.bossHead + 1) % BOSS_HIST_LEN;
+      e.bossCount = Math.min(BOSS_HIST_LEN, e.bossCount + 1);
+    }
 
     if (e.phase === 1 && e.hp < e.maxHp * 0.5) {
       e.phase = 2;

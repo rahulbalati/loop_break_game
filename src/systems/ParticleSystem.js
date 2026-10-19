@@ -1,12 +1,11 @@
 // LOOP//BREAK - Pooled particle simulation. Pure data; drawn by Renderer with cached glow sprites.
 
-const MAX_PARTICLES = 520;
-
 export class ParticleSystem {
   constructor(rng = Math.random) {
     this.rng = rng;
     this.items = [];
     this.free = [];
+    this.max = 520; // lowered on weaker devices
   }
 
   reset() {
@@ -16,7 +15,7 @@ export class ParticleSystem {
 
   emit(x, y, { count = 8, color = '#ffffff', speed = 140, life = 0.45, size = 3, angle = 0, spread = Math.PI * 2, drag = 4 } = {}) {
     for (let i = 0; i < count; i++) {
-      if (this.items.length >= MAX_PARTICLES) return;
+      if (this.items.length >= this.max) return;
       const p = this.free.pop() || {};
       const a = angle - spread / 2 + this.rng() * spread;
       const s = speed * (0.35 + this.rng() * 0.85);

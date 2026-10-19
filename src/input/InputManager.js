@@ -3,7 +3,8 @@
 import { TouchJoystick } from './TouchJoystick.js';
 
 const DASH_CODES = new Set(['Space', 'ShiftLeft', 'ShiftRight', 'KeyK']);
-const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ']);
+// Inside the CrazyGames iframe these keys would otherwise scroll the host page
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End']);
 
 export class InputManager {
   constructor(canvas) {
@@ -29,7 +30,9 @@ export class InputManager {
   bindKeyboard() {
     window.addEventListener('keydown', (e) => {
       this.lastInputType = 'keyboard';
-      if (this.isGameplayActive && SCROLL_KEYS.has(e.key)) e.preventDefault();
+      // Space on a focused button must still activate it (it can't scroll anything there)
+      const onButton = e.key === ' ' && e.target && e.target.closest && e.target.closest('button');
+      if (SCROLL_KEYS.has(e.key) && !onButton) e.preventDefault();
       this.keys[e.code] = true;
       this.keys[e.key.toLowerCase()] = true;
       if (!this.isGameplayActive || e.repeat) return;

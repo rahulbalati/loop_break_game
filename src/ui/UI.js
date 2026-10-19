@@ -36,6 +36,8 @@ export class UI {
   click(el, fn) {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Drop focus after mouse/touch clicks so Space (dash) can't re-trigger the button mid-run
+      if (e.detail > 0) el.blur();
       audio.ensureContext();
       audio.playClick();
       fn(e);
@@ -59,8 +61,16 @@ export class UI {
     this.click($('btn-retry'), () => g.retry());
     this.click($('btn-hub'), () => g.goHub());
 
+    // Stop wheel / long-press from scrolling the host page or opening menus, except inside scrollable lists
+    window.addEventListener('wheel', (e) => {
+      if (!(e.target.closest && e.target.closest('.panel-body, .results, .sheet'))) e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      // A focused button already handles Space/Enter itself
+      if ((e.code === 'Space' || e.code === 'Enter') && e.target.closest && e.target.closest('button')) return;
       const state = g.state;
       if (state === 'DRAFT') {
         const n = ['Digit1', 'Digit2', 'Digit3', 'Numpad1', 'Numpad2', 'Numpad3'].indexOf(e.code) % 3;
@@ -255,7 +265,7 @@ export class UI {
     this.hideAll();
     $('hud').classList.remove('hidden');
     $('hud-stage').textContent = run.stage.name;
-    $('hud-boss').classList.add('hidden');
+    this.hideBossBar();
     $('toasts').innerHTML = '';
     this.hudCache = {};
     this.renderBuild(run);
@@ -320,11 +330,13 @@ export class UI {
   showBossBar(name) {
     $('hud-boss-name').textContent = name;
     $('hud-boss').classList.remove('hidden');
+    $('hud').classList.add('has-boss');
     this.hudCache.boss = null;
   }
 
   hideBossBar() {
     $('hud-boss').classList.add('hidden');
+    $('hud').classList.remove('has-boss');
   }
 
   toast({ title, text = '', kind = 'info' }) {
@@ -356,6 +368,8 @@ export class UI {
     v.classList.remove('hit');
     void v.offsetWidth;
     v.classList.add('hit');
+    clearTimeout(this.hitTimer);
+    this.hitTimer = setTimeout(() => v.classList.remove('hit'), 400);
   }
 
   // ---------- DRAFT ----------
@@ -433,6 +447,7 @@ export class UI {
     tick();
     clearInterval(this.reviveTimer);
     this.reviveTimer = setInterval(() => {
+      if (document.hidden) return;
       left -= 0.1;
       tick();
       if (left <= 0) {

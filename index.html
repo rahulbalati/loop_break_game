@@ -6,6 +6,8 @@
   <title>LOOP//BREAK</title>
   <meta name="description" content="LOOP//BREAK — every path you run becomes a past self that fights beside you. Draw loops to shatter enemies and survive the time loop.">
   <meta name="theme-color" content="#07060d">
+  <!-- Paint the background before CSS/JS arrive so the iframe never flashes white -->
+  <style>html,body{margin:0;height:100%;background:#07060d;overflow:hidden}</style>
 
   <!-- CrazyGames SDK v3 -->
   <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
@@ -106,12 +108,12 @@
       <div class="sheet">
         <span class="kicker">SIMULATION HELD</span>
         <h2 class="sheet-title">PAUSED</h2>
-        <div id="pause-build" class="build-list"></div>
-        <div id="pause-settings" class="settings-grid"></div>
-        <div class="sheet-actions">
+        <div class="sheet-actions pause-actions">
           <button id="btn-resume" class="cta cta-sm"><span class="cta-main">RESUME</span></button>
           <button id="btn-abandon" class="ghost-btn">END RUN</button>
         </div>
+        <div id="pause-build" class="build-list"></div>
+        <div id="pause-settings" class="settings-grid"></div>
       </div>
     </section>
 
@@ -145,11 +147,11 @@
           <div class="reward-flux"><span data-icon="flux"></span><span id="results-flux">+0</span><span class="reward-lbl">FLUX BANKED</span></div>
           <button id="btn-double" class="ghost-btn ghost-gold"><span data-icon="play"></span>WATCH AD · DOUBLE IT</button>
         </div>
-        <div id="results-progress" class="results-progress"></div>
         <div class="results-actions">
           <button id="btn-retry" class="cta"><span class="cta-main"><span data-icon="reroll"></span>RUN IT BACK</span><span class="cta-sub desktop-only">SPACE</span></button>
           <button id="btn-hub" class="ghost-btn"><span data-icon="home"></span>HUB</button>
         </div>
+        <div id="results-progress" class="results-progress"></div>
       </div>
     </section>
 
