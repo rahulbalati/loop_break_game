@@ -20,4 +20,6 @@ export const SKINS = [
   { id: 'cyber_emerald', name: 'Emerald', cost: 100, color: '#3dffa8' },
   { id: 'solar_flare', name: 'Solar Flare', cost: 175, color: '#ff9a3d' },
   { id: 'void_ghost', name: 'Void Specter', cost: 300, color: '#f0f4ff' },
+  // Exclusive: day 7 of the login streak
+  { id: 'chrono', name: 'Chrono', cost: null, color: '#e8ff3a', exclusive: 'Day 7 login reward' },
 ];

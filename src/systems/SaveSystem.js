@@ -2,6 +2,10 @@
 import { platform } from './CrazyGamesSDK.js';
 import { CHARACTERS } from '../data/characters.js';
 import { LAB_NODES, labCost, SKINS } from '../data/meta.js';
+import { STAGES } from '../data/stages.js';
+import * as Daily from './DailySystem.js';
+
+const STAGE2_UNLOCK_SECONDS = 420;
 
 export const SAVE_KEY = 'loopbreak_save_v2';
 export const LEGACY_SAVE_KEY = 'loopbreak_save_data_v1';
@@ -21,6 +25,9 @@ export function createDefaultSave() {
     unlockedCharacters: ['cipher'],
     selectedSkin: 'cyan_default',
     unlockedSkins: ['cyan_default'],
+    selectedStage: 'neon_grid',
+    unlockedStages: ['neon_grid'],
+    daily: Daily.defaultDaily(),
     lab: Object.fromEntries(LAB_NODES.map(n => [n.id, 0])),
     stats: {
       runs: 0,
@@ -53,7 +60,14 @@ export function normalizeSave(parsed) {
     settings: { ...def.settings, ...(parsed.settings || {}) },
     discovered: { ...def.discovered, ...(parsed.discovered || {}) },
     tips: { ...def.tips, ...(parsed.tips || {}) },
+    daily: normalizeDaily(parsed.daily),
   };
+  const stageIds = STAGES.map(st => st.id);
+  out.unlockedStages = Array.from(new Set(['neon_grid', ...(Array.isArray(out.unlockedStages) ? out.unlockedStages : [])])).filter(id => stageIds.includes(id));
+  if (!out.unlockedStages.includes(out.selectedStage)) out.selectedStage = 'neon_grid';
+  if (out.stats.bestTime >= STAGE2_UNLOCK_SECONDS || out.stats.bossKills > 0) {
+    if (!out.unlockedStages.includes('glitch_ruins')) out.unlockedStages.push('glitch_ruins');
+  }
   if (!Array.isArray(out.unlockedCharacters) || !out.unlockedCharacters.includes('cipher')) {
     out.unlockedCharacters = ['cipher', ...(Array.isArray(out.unlockedCharacters) ? out.unlockedCharacters : [])];
   }
@@ -64,6 +78,18 @@ export function normalizeSave(parsed) {
   if (!out.unlockedSkins.includes(out.selectedSkin)) out.selectedSkin = 'cyan_default';
   if (typeof out.flux !== 'number' || !isFinite(out.flux) || out.flux < 0) out.flux = 0;
   return out;
+}
+
+function normalizeDaily(d) {
+  const def = Daily.defaultDaily();
+  if (!d || typeof d !== 'object') return def;
+  const streak = { ...def.streak, ...(d.streak || {}) };
+  if (typeof streak.count !== 'number' || streak.count < 0) streak.count = 0;
+  const m = d.missions;
+  const missions = m && typeof m.day === 'string' && Array.isArray(m.list) && m.list.every(x => x && Daily.missionDef(x.id))
+    ? { day: m.day, list: m.list, bonusClaimed: !!m.bonusClaimed }
+    : def.missions;
+  return { streak, missions };
 }
 
 // Converts a v1 save: Flux carries over, old stat upgrades are refunded, skins are kept.
@@ -127,6 +153,7 @@ export class SaveSystem {
 
     this.data = normalizeSave(best);
     this.isLoaded = true;
+    this.dailyCheckIn();
     this.save();
     return this.data;
   }
@@ -143,8 +170,36 @@ export class SaveSystem {
     }
   }
 
-  // Applies a finished run. Returns { newRecords, unlockedCharacters }.
+  // Rolls the streak and missions over to the current local day. Safe to call often.
+  dailyCheckIn(now = new Date()) {
+    const result = Daily.checkIn(this.data.daily, Daily.dayKey(now), this.data.unlockedStages);
+    if (result.newDay || result.streakChanged) this.save();
+    return result;
+  }
+
+  canClaimStreak(now = new Date()) {
+    return Daily.canClaimStreak(this.data.daily, Daily.dayKey(now));
+  }
+
+  claimStreak(now = new Date()) {
+    const reward = Daily.claimStreak(this.data.daily, Daily.dayKey(now), this.data.unlockedSkins);
+    if (!reward) return null;
+    this.data.flux += reward.flux;
+    if (reward.skin && !this.data.unlockedSkins.includes(reward.skin)) this.data.unlockedSkins.push(reward.skin);
+    this.save();
+    return reward;
+  }
+
+  selectStage(id) {
+    if (!this.data.unlockedStages.includes(id)) return false;
+    this.data.selectedStage = id;
+    this.save();
+    return true;
+  }
+
+  // Applies a finished run. Returns { newRecords, unlockedCharacters, unlockedStages, missions }.
   recordRun(summary) {
+    this.dailyCheckIn();
     const s = this.data.stats;
     const newRecords = [];
     s.runs += 1;
@@ -160,9 +215,16 @@ export class SaveSystem {
       if (!this.data.discovered.evolutions.includes(evo)) this.data.discovered.evolutions.push(evo);
     }
     this.data.flux += summary.flux;
+    const missions = Daily.applyRun(this.data.daily, summary);
+    this.data.flux += missions.fluxEarned;
     const unlockedCharacters = this.checkUnlocks();
+    const unlockedStages = [];
+    if (summary.stageId === 'neon_grid' && (summary.time >= STAGE2_UNLOCK_SECONDS || summary.bossKilled) && !this.data.unlockedStages.includes('glitch_ruins')) {
+      this.data.unlockedStages.push('glitch_ruins');
+      unlockedStages.push('glitch_ruins');
+    }
     this.save();
-    return { newRecords, unlockedCharacters };
+    return { newRecords, unlockedCharacters, unlockedStages, missions };
   }
 
   addFlux(amount) {
@@ -227,6 +289,7 @@ export class SaveSystem {
     const skin = SKINS.find(s => s.id === id);
     if (!skin) return false;
     if (this.data.unlockedSkins.includes(id)) return true;
+    if (skin.cost === null) return false; // exclusive rewards can't be bought
     if (this.data.flux < skin.cost) return false;
     this.data.flux -= skin.cost;
     this.data.unlockedSkins.push(id);

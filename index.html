@@ -46,7 +46,10 @@
     <section id="screen-hub" class="screen hidden">
       <header class="hub-top">
         <div class="hub-sig"><span class="dot"></span>SIMULATION ONLINE</div>
-        <div class="flux-chip"><span data-icon="flux"></span><span id="hub-flux">0</span><span class="flux-chip-lbl">FLUX</span></div>
+        <div class="hub-top-right">
+          <button id="hub-streak" class="streak-chip"><span data-icon="streak"></span><span id="hub-streak-text">DAY 1</span></button>
+          <div class="flux-chip"><span data-icon="flux"></span><span id="hub-flux">0</span><span class="flux-chip-lbl">FLUX</span></div>
+        </div>
       </header>
 
       <div class="hub-main">
@@ -58,11 +61,13 @@
             <span class="cta-main"><span data-icon="play"></span>START RUN</span>
             <span id="hub-stage-line" class="cta-sub">STAGE 01 · NEON GRID</span>
           </button>
+          <div id="hub-stages" class="stage-row"></div>
 
           <nav class="hub-nav">
-            <button class="nav-btn" data-panel="loopers"><span class="nav-idx">02</span><span data-icon="people"></span><span class="nav-lbl">LOOPERS</span><span id="badge-loopers" class="badge hidden"></span></button>
-            <button class="nav-btn" data-panel="lab"><span class="nav-idx">03</span><span data-icon="lab"></span><span class="nav-lbl">FLUX LAB</span><span id="badge-lab" class="badge hidden"></span></button>
-            <button class="nav-btn" data-panel="settings"><span class="nav-idx">04</span><span data-icon="gear"></span><span class="nav-lbl">SETTINGS</span></button>
+            <button class="nav-btn" data-panel="missions"><span class="nav-idx">02</span><span data-icon="target"></span><span class="nav-lbl">DAILY</span><span id="badge-missions" class="badge hidden"></span></button>
+            <button class="nav-btn" data-panel="loopers"><span class="nav-idx">03</span><span data-icon="people"></span><span class="nav-lbl">LOOPERS</span><span id="badge-loopers" class="badge hidden"></span></button>
+            <button class="nav-btn" data-panel="lab"><span class="nav-idx">04</span><span data-icon="lab"></span><span class="nav-lbl">FLUX LAB</span><span id="badge-lab" class="badge hidden"></span></button>
+            <button class="nav-btn" data-panel="settings"><span class="nav-idx">05</span><span data-icon="gear"></span><span class="nav-lbl">SETTINGS</span></button>
           </nav>
         </div>
 
@@ -151,6 +156,7 @@
           <button id="btn-retry" class="cta"><span class="cta-main"><span data-icon="reroll"></span>RUN IT BACK</span><span class="cta-sub desktop-only">SPACE</span></button>
           <button id="btn-hub" class="ghost-btn"><span data-icon="home"></span>HUB</button>
         </div>
+        <div id="results-missions" class="results-missions"></div>
         <div id="results-progress" class="results-progress"></div>
       </div>
     </section>

@@ -9,6 +9,7 @@ const args = Object.fromEntries(process.argv.slice(2).map(a => a.split('=')));
 const RUNS = Number(args.runs || 8);
 const SKILL = Number(args.skill || 0.6); // 0 = wanders, 1 = kites well
 const CHARACTER = args.character || 'cipher';
+const STAGE = args.stage || 'neon_grid';
 const LAB = args.lab ? JSON.parse(args.lab) : {};
 const DT = 1 / 60;
 
@@ -41,6 +42,13 @@ function botInput(run, tick, rng, bot) {
       ax += dx * w;
       ay += dy * w;
     }
+  }
+  // Telegraphed rifts are visible to players, so the bot steps out of them too
+  for (const rf of run.rifts || []) {
+    if (rf.warn <= 0) continue;
+    const dx = p.x - rf.x, dy = p.y - rf.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < (rf.r + 30) ** 2 && d2 > 1) { ax += (dx / d2) * 6; ay += (dy / d2) * 6; }
   }
   for (const b of run.bullets) {
     const dx = p.x - b.x, dy = p.y - b.y;
@@ -87,7 +95,7 @@ function pick(run, options) {
 }
 
 function play(seed) {
-  const run = new Run({ seed, characterId: CHARACTER, lab: LAB });
+  const run = new Run({ seed, characterId: CHARACTER, lab: LAB, stageId: STAGE });
   let rngState = seed * 7919;
   const rng = () => ((rngState = (rngState * 1103515245 + 12345) % 2147483648) / 2147483648);
   const marks = {};
@@ -131,7 +139,7 @@ for (let i = 0; i < RUNS; i++) {
 const avg = (f) => results.reduce((a, r) => a + f(r), 0) / results.length;
 const med = (f) => { const v = results.map(f).sort((a, b) => a - b); return v[Math.floor(v.length / 2)]; };
 console.log('\n--- summary ---');
-console.log(`skill ${SKILL}  character ${CHARACTER}  (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+console.log(`skill ${SKILL}  character ${CHARACTER}  stage ${STAGE}  (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 console.log(`median death ${formatTime(med(r => r.time))}   mean ${formatTime(avg(r => r.time))}`);
 for (const L of [2, 5, 10, 15, 20]) {
   const hit = results.filter(r => r.marks[`lv${L}`] !== undefined);

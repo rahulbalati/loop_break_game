@@ -239,9 +239,10 @@ export class Renderer {
     // Slow scanning band adds motion even when the player stands still
     const bandY = ((time * 60) % (h + 200)) - 100;
     const g = ctx.createLinearGradient(0, bandY - 80, 0, bandY + 80);
-    g.addColorStop(0, 'rgba(122,92,255,0)');
-    g.addColorStop(0.5, 'rgba(122,92,255,0.06)');
-    g.addColorStop(1, 'rgba(122,92,255,0)');
+    const band = palette.band || '122,92,255';
+    g.addColorStop(0, `rgba(${band},0)`);
+    g.addColorStop(0.5, `rgba(${band},0.06)`);
+    g.addColorStop(1, `rgba(${band},0)`);
     ctx.fillStyle = g;
     ctx.fillRect(0, bandY - 80, w, 160);
   }
@@ -306,6 +307,35 @@ export class Renderer {
         }
       }
       ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Rift telegraphs: ring closes in, then a solid flash on impact
+    for (const rf of run.rifts) {
+      const x = rf.x + ox, y = rf.y + oy;
+      if (!onScreen(rf.x, rf.y, rf.r + 10)) continue;
+      if (rf.warn > 0) {
+        const k = 1 - rf.warn / rf.maxWarn;
+        ctx.fillStyle = `rgba(255,61,110,${0.08 + k * 0.14})`;
+        ctx.beginPath();
+        ctx.arc(x, y, rf.r, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,61,110,0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = '#3dffd0';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(x, y, rf.r * (1 - k) + 4, 0, TAU);
+        ctx.stroke();
+      } else {
+        const a = rf.life / 0.35;
+        ctx.fillStyle = `rgba(61,255,208,${a * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(x, y, rf.r * (1.1 - a * 0.1), 0, TAU);
+        ctx.fill();
+      }
     }
 
     // Gems & pickups

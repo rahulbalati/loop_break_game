@@ -11,6 +11,7 @@ import { platform } from '../systems/CrazyGamesSDK.js';
 import { audio } from '../audio/AudioSynthesizer.js';
 import { SKINS } from '../data/meta.js';
 import { ENEMIES } from '../data/enemies.js';
+import { previewProgress, missionLabel } from '../systems/DailySystem.js';
 
 // States: HUB | RUN | DRAFT | PAUSED | REVIVE | RESULTS | BUSY (waiting on an ad)
 export class Game {
@@ -103,7 +104,7 @@ export class Game {
     const skin = SKINS.find(s => s.id === d.selectedSkin);
     this.run = new Run({
       characterId: d.selectedCharacter,
-      stageId: 'neon_grid',
+      stageId: d.selectedStage,
       lab: d.lab,
       seed: (Math.random() * 2 ** 31) | 0,
       viewW: this.viewW,
@@ -118,6 +119,9 @@ export class Game {
     this.renderer.camX = 0;
     this.renderer.camY = 0;
     this.hintState = { moved: false };
+    // Missions already complete before this run; the rest get a live toast the moment they finish
+    this.liveMissions = new Set(d.daily.missions.list.filter(m => m.done).map(m => m.id));
+    this.missionCheckTimer = 0;
     this.awaitingInput = true;
     this.state = 'RUN';
     this.ui.showHud(this.run);
@@ -240,9 +244,9 @@ export class Game {
   endRun() {
     const run = this.run;
     const summary = run.summary();
-    const flux = computeRunFlux(summary, saveSystem.labLevel('greed'));
+    const flux = computeRunFlux(summary, saveSystem.labLevel('greed'), run.stage.fluxMult || 1);
     summary.flux = flux;
-    const { newRecords, unlockedCharacters } = saveSystem.recordRun(summary);
+    const { newRecords, unlockedCharacters, unlockedStages, missions } = saveSystem.recordRun(summary);
     this.lastSummary = summary;
     this.lastFlux = flux;
     this.state = 'RESULTS';
@@ -250,8 +254,8 @@ export class Game {
     platform.gameplayStop();
     audio.setMusic('menu');
     if (!summary.bossKilled) audio.playGameOver();
-    if (newRecords.length > 0 || unlockedCharacters.length > 0) platform.happytime();
-    this.ui.showResults({ summary, flux, newRecords, unlocked: unlockedCharacters, canDouble: true });
+    if (newRecords.length > 0 || unlockedCharacters.length > 0 || unlockedStages.length > 0 || missions.completed.length > 0) platform.happytime();
+    this.ui.showResults({ summary, flux, newRecords, unlocked: unlockedCharacters, unlockedStages, missions, canDouble: true });
   }
 
   doubleFlux() {
@@ -301,8 +305,39 @@ export class Game {
     this.state = 'HUB';
     this.input.setGameplayActive(false);
     platform.gameplayStop();
+    saveSystem.dailyCheckIn();
     this.ui.showHub();
     audio.setMusic('menu');
+    // Daily login reward pops up on the first hub visit of the day
+    if (saveSystem.canClaimStreak()) this.ui.openPanel('missions');
+  }
+
+  claimStreak() {
+    const reward = saveSystem.claimStreak();
+    if (!reward) return;
+    audio.playStreak();
+    platform.happytime();
+    this.ui.onStreakClaimed(reward);
+  }
+
+  selectStage(id) {
+    if (saveSystem.selectStage(id)) this.ui.refreshHub();
+  }
+
+  // Toast missions the moment they complete mid-run (rewards are banked at run end)
+  checkLiveMissions(dt) {
+    this.missionCheckTimer -= dt;
+    if (this.missionCheckTimer > 0) return;
+    this.missionCheckTimer = 0.5;
+    const partial = this.run.summary();
+    for (const m of saveSystem.data.daily.missions.list) {
+      if (this.liveMissions.has(m.id)) continue;
+      if (previewProgress(m, partial) >= m.target) {
+        this.liveMissions.add(m.id);
+        audio.playMission();
+        this.ui.toast({ title: 'MISSION COMPLETE', text: `${missionLabel(m)} · +${m.reward} Flux`, kind: 'win' });
+      }
+    }
   }
 
   // ---------- Events from the simulation ----------
@@ -403,7 +438,10 @@ export class Game {
       }
       if (this.run) {
         this.ui.updateHud(this.run);
-        if (this.state === 'RUN') this.updateHints();
+        if (this.state === 'RUN') {
+          this.updateHints();
+          if (!this.awaitingInput) this.checkLiveMissions(dt);
+        }
         const p = this.run.player;
         this.input.joystick.setCooldown(p.dashCd / CONFIG.PLAYER.DASH_COOLDOWN);
         audio.setIntensity(Math.min(1, this.run.time / 420 + this.run.enemies.length / 400));

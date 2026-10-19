@@ -235,6 +235,20 @@ export class AudioSynthesizer {
     this.tone(c, { type: 'sawtooth', freq: NOTE(76 + depth * 3), freqEnd: NOTE(64), dur: 0.25, vol: 0.06, filter: { type: 'lowpass', freq: 2400 } });
     this.noise(c, { dur: 0.3, vol: 0.18, type: 'lowpass', freq: 2000, freqEnd: 200 });
   }
+  playRift() {
+    const c = this.sfx('rift', 0.08); if (!c) return;
+    this.noise(c, { dur: 0.3, vol: 0.2, type: 'bandpass', freq: 3200, freqEnd: 300, q: 2 });
+    this.tone(c, { type: 'square', freq: 90, freqEnd: 40, dur: 0.25, vol: 0.12 });
+  }
+  playStreak() {
+    const c = this.sfx('streak', 0.3); if (!c) return;
+    [72, 76, 79, 84, 88].forEach((n, i) => this.tone(c, { type: 'triangle', freq: NOTE(n), start: i * 0.07, dur: 0.4, vol: 0.12 }));
+    this.noise(c, { start: 0.3, dur: 0.4, vol: 0.06, type: 'highpass', freq: 5000 });
+  }
+  playMission() {
+    const c = this.sfx('mission', 0.3); if (!c) return;
+    [79, 84, 91].forEach((n, i) => this.tone(c, { type: 'square', freq: NOTE(n), start: i * 0.06, dur: 0.18, vol: 0.06 }));
+  }
   playBossWarn() {
     const c = this.sfx('warn', 0.8); if (!c) return;
     for (let i = 0; i < 3; i++) this.tone(c, { type: 'sawtooth', freq: 220, freqEnd: 180, start: i * 0.35, dur: 0.28, vol: 0.12, filter: { type: 'lowpass', freq: 1200 } });

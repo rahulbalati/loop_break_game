@@ -33,6 +33,10 @@ export class Run {
     this.loopKills = 0;
     this.paradoxes = 0;
     this.fluxPickups = 0;
+    this.elitesKilled = 0;
+    this.cachesOpened = 0;
+    this.rifts = [];
+    this.riftTimer = this.stage.rifts ? this.stage.rifts.from : 0;
     this.damageDealt = 0;
     this.level = 1;
     this.xp = 0;
@@ -171,6 +175,7 @@ export class Run {
     this.updateEchoes(dt);
     this.updateTrail(dt);
     this.updateDirector(dt);
+    this.updateRifts(dt);
 
     this.hash.clear();
     for (const e of this.enemies) if (!e.dead) this.hash.insert(e);
@@ -482,6 +487,62 @@ export class Run {
     return e;
   }
 
+  // ---------- Rifts (stage hazard): telegraphed strikes that hit the player and enemies alike ----------
+
+  updateRifts(dt) {
+    const cfg = this.stage.rifts;
+    if (!cfg) return;
+    const p = this.player;
+    this.riftTimer -= dt;
+    if (this.riftTimer <= 0 && !this.bossKilled) {
+      this.riftTimer = cfg.every;
+      const count = Math.floor(cfg.count + this.time * cfg.countGrowth);
+      for (let i = 0; i < count; i++) {
+        // First strike lands near where the player is heading, the rest scatter around them
+        const lead = i === 0 ? 0.6 : 0;
+        const a = this.rng() * Math.PI * 2;
+        const d = i === 0 ? 40 + this.rng() * 80 : 90 + this.rng() * 220;
+        this.rifts.push({
+          x: p.x + p.vx * lead + Math.cos(a) * d,
+          y: p.y + p.vy * lead + Math.sin(a) * d,
+          r: cfg.radius, warn: cfg.warn, maxWarn: cfg.warn, life: 0.35,
+        });
+      }
+    }
+    const rs = this.rifts;
+    for (let i = rs.length - 1; i >= 0; i--) {
+      const rf = rs[i];
+      if (rf.warn > 0) {
+        rf.warn -= dt;
+        if (rf.warn <= 0) this.strikeRift(rf, cfg);
+        continue;
+      }
+      rf.life -= dt;
+      if (rf.life <= 0) {
+        rs[i] = rs[rs.length - 1];
+        rs.pop();
+      }
+    }
+  }
+
+  strikeRift(rf, cfg) {
+    const p = this.player;
+    if ((p.x - rf.x) ** 2 + (p.y - rf.y) ** 2 < (rf.r + p.r * 0.5) ** 2) this.hurtPlayer(cfg.damage);
+    const found = this.hash.query(rf.x, rf.y, rf.r + MAX_ENEMY_RADIUS, this.blastBuf);
+    let hits = 0;
+    for (const e of found) {
+      if (e.dead) continue;
+      if ((e.x - rf.x) ** 2 + (e.y - rf.y) ** 2 < (rf.r + e.r) ** 2) {
+        this.damageEnemy(e, e.boss || e.miniboss ? cfg.enemyDamage * 0.5 : cfg.enemyDamage * this.stage.hpScale(this.time), { noText: true, color: '#3dffd0' });
+        hits++;
+      }
+    }
+    if (hits >= 6) this.addText(rf.x, rf.y - 10, `RIFT ×${hits}`, '#3dffd0', 18, 0.9);
+    this.particles.emit(rf.x, rf.y, { count: 18, color: '#3dffd0', speed: 260, life: 0.4, size: 3 });
+    this.shake = Math.max(this.shake, 5);
+    audio.playRift();
+  }
+
   // ---------- Enemies ----------
 
   updateEnemies(dt) {
@@ -618,7 +679,7 @@ export class Run {
     if (e.phase === 1 && e.hp < e.maxHp * 0.5) {
       e.phase = 2;
       e.echo = { x: e.x, y: e.y, r: e.r * 0.8, fireTimer: 1.4 };
-      this.emit('toast', { title: 'PHASE 2', text: 'The Loopkeeper rewinds itself', kind: 'danger' });
+      this.emit('toast', { title: 'PHASE 2', text: `${e.def.name} splits its own timeline`, kind: 'danger' });
       audio.playBossWarn();
       this.shake = 16;
     }
@@ -696,6 +757,7 @@ export class Run {
   killEnemy(e, cause) {
     e.dead = true;
     this.kills += 1;
+    if (e.elite || e.miniboss) this.elitesKilled += 1;
     this.combo += 1;
     this.comboTimer = 1.6;
     this.particles.emit(e.x, e.y, { count: e.boss ? 80 : e.miniboss ? 40 : e.elite ? 26 : 9, color: e.color, speed: e.boss ? 420 : 200, life: 0.5, size: e.r > 20 ? 4.5 : 3 });
@@ -1085,6 +1147,7 @@ export class Run {
         audio.playFlux();
         break;
       case 'cache':
+        this.cachesOpened += 1;
         this.emit('cache', { options: buildCacheOptions(this) });
         audio.playChest();
         break;
@@ -1147,6 +1210,9 @@ export class Run {
       level: this.level,
       bossKilled: this.bossKilled,
       fluxPickups: this.fluxPickups,
+      stageId: this.stage.id,
+      elites: this.elitesKilled,
+      caches: this.cachesOpened,
       evolutions: this.evolutions.slice(),
       weapons: this.weapons.map(w => ({ id: w.evolved || w.id, level: w.level, evolved: !!w.evolved })),
       passives: { ...this.passives },

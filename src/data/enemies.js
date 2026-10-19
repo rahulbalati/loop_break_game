@@ -41,4 +41,9 @@ export const ENEMIES = {
     color: '#ff2e63', shape: 'boss', boss: true, mass: 20,
     ranged: { burst: 18, cooldown: 2.8, bulletSpeed: 185, damage: 14 },
   },
+  fracture: {
+    name: 'THE FRACTURE', hp: 7000, speed: 74, damage: 30, radius: 54, xp: 260,
+    color: '#3dffd0', shape: 'boss', boss: true, mass: 20,
+    ranged: { burst: 22, cooldown: 2.5, bulletSpeed: 195, damage: 15 },
+  },
 };

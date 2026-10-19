@@ -22,10 +22,20 @@ Echo Eaters hunt your echoes and jam them, so protecting your past selves matter
 - Evolutions come from caches: max-level weapon + its paired passive (Pulse Bolt + Overclock → Singularity Bolt, Orbit Shards + Temporal Fork → Event Horizon).
 - One rewarded **Rewind** per run (full HP + area-clearing shockwave).
 
+## Daily systems (next-day retention)
+
+- **Login streak**: 7-day reward track (20 → 120 Flux). Day 7 grants the exclusive **Chrono** colorway. Missing a day resets the streak. The reward pops up on the first hub visit of the day.
+- **Daily missions**: 3 per day (easy / medium / hard), the same for every player on a given date, generated from a seeded pool in `src/data/daily.js`. Progress is shown live with a toast the moment a mission completes, banked at run end, and all three pay a bonus.
+- **Tomorrow tease**: the Daily panel and results screen always show the next day's streak reward and when missions reset.
+- **Stage 02 · Glitch Ruins**: unlocks after surviving 7:00 (or beating the Loopkeeper) in Neon Grid. Tougher enemies, telegraphed **rift** strikes that hit players and enemies alike, a new boss (**The Fracture**), and ×1.5 Flux.
+
+Logic lives in `src/systems/DailySystem.js` as pure functions over the save, so it is fully covered by tests with fixed dates.
+
 ## Meta progression
 
 - **Flux** is earned every run (`src/systems/Economy.js` is the single source of truth, so the results screen always matches what is banked). Rewarded ad doubles it.
 - **Flux Lab**: 6 permanent upgrade lines.
+- **Stages**: Neon Grid, Glitch Ruins (see above).
 - **Loopers**: Cipher, Swarm (unlock: 150 loop kills), Warden (unlock: survive 5:00). Each changes how echoes behave.
 - **Colorways**: 5 cosmetic player colors.
 

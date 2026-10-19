@@ -4,7 +4,9 @@ import { CHARACTERS, getCharacter } from '../data/characters.js';
 import { LAB_NODES, SKINS } from '../data/meta.js';
 import { WEAPONS, EVOLUTIONS } from '../data/weapons.js';
 import { PASSIVES } from '../data/passives.js';
-import { getStage } from '../data/stages.js';
+import { getStage, STAGES, isStageUnlocked } from '../data/stages.js';
+import { STREAK_REWARDS, streakReward, ALL_MISSIONS_BONUS } from '../data/daily.js';
+import { missionLabel, missionsDone, msUntilNextDay } from '../systems/DailySystem.js';
 import { formatTime } from '../core/math.js';
 import { saveSystem } from '../systems/SaveSystem.js';
 import { audio } from '../audio/AudioSynthesizer.js';
@@ -50,6 +52,7 @@ export class UI {
     this.click($('btn-play'), () => g.startRun());
     document.querySelectorAll('.nav-btn').forEach((b) => this.click(b, () => this.openPanel(b.dataset.panel)));
     this.click($('panel-close'), () => this.closePanel());
+    this.click($('hub-streak'), () => this.openPanel('missions'));
     $('panel-layer').addEventListener('click', (e) => { if (e.target.id === 'panel-layer') this.closePanel(); });
     this.click($('hud-pause'), () => g.pause());
     this.click($('btn-resume'), () => g.resume());
@@ -111,8 +114,18 @@ export class UI {
     $('rec-time').textContent = formatTime(d.stats.bestTime);
     $('rec-level').textContent = d.stats.bestLevel;
     $('rec-loops').textContent = d.stats.loopKills.toLocaleString();
-    const stage = getStage('neon_grid');
-    $('hub-stage-line').textContent = `STAGE ${String(stage.index).padStart(2, '0')} · ${stage.name} · BEST ${formatTime(d.stats.bestTime)}`;
+    const stage = getStage(d.selectedStage);
+    const stageExtra = stage.fluxMult > 1 ? ` · ×${stage.fluxMult} FLUX` : ` · BEST ${formatTime(d.stats.bestTime)}`;
+    $('hub-stage-line').textContent = `STAGE ${String(stage.index).padStart(2, '0')} · ${stage.name}${stageExtra}`;
+    this.renderStages();
+
+    const claimable = saveSystem.canClaimStreak();
+    $('hub-streak-text').textContent = `DAY ${Math.max(1, d.daily.streak.count)}`;
+    $('hub-streak').classList.toggle('is-ready', claimable);
+    const mBadge = $('badge-missions');
+    mBadge.classList.remove('hidden');
+    mBadge.textContent = claimable ? 'CLAIM' : `${missionsDone(d.daily)}/${d.daily.missions.list.length}`;
+    mBadge.classList.toggle('badge-hot', claimable);
 
     const ch = getCharacter(d.selectedCharacter);
     $('hub-looper').innerHTML = `
@@ -136,10 +149,28 @@ export class UI {
     }
   }
 
+  renderStages() {
+    const d = saveSystem.data;
+    const row = $('hub-stages');
+    row.innerHTML = STAGES.map((st) => {
+      const open = isStageUnlocked(st, d);
+      const sel = d.selectedStage === st.id;
+      const tail = open ? (st.fluxMult > 1 ? `<span class="stage-tag">×${st.fluxMult} FLUX</span>` : '') : `<span class="stage-req">${st.unlock.label}</span>`;
+      return `<button class="stage-chip ${sel ? 'is-selected' : ''} ${open ? '' : 'is-locked'}" data-stage="${st.id}" style="--c:${st.palette.glow}" ${open ? '' : 'aria-disabled="true"'}>
+        <span class="stage-idx">${String(st.index).padStart(2, '0')}</span>
+        <span class="stage-name">${open ? '' : iconSvg('lock', 12)}${st.name}</span>${tail}
+      </button>`;
+    }).join('');
+    row.querySelectorAll('[data-stage]').forEach((el) => this.click(el, () => {
+      const st = getStage(el.dataset.stage);
+      if (isStageUnlocked(st, saveSystem.data)) this.game.selectStage(st.id);
+    }));
+  }
+
   openPanel(kind) {
     this.panel = kind;
     $('panel-layer').classList.remove('hidden');
-    const titles = { loopers: ['02', 'LOOPERS'], lab: ['03', 'FLUX LAB'], settings: ['04', 'SETTINGS'] };
+    const titles = { missions: ['02', 'DAILY'], loopers: ['03', 'LOOPERS'], lab: ['04', 'FLUX LAB'], settings: ['05', 'SETTINGS'] };
     $('panel-index').textContent = titles[kind][0];
     $('panel-title').textContent = titles[kind][1];
     this.renderPanel();
@@ -154,11 +185,78 @@ export class UI {
   renderPanel() {
     $('panel-flux').textContent = saveSystem.data.flux.toLocaleString();
     const body = $('panel-body');
-    if (this.panel === 'loopers') body.innerHTML = this.loopersHtml();
+    if (this.panel === 'missions') body.innerHTML = this.missionsHtml();
+    else if (this.panel === 'loopers') body.innerHTML = this.loopersHtml();
     else if (this.panel === 'lab') body.innerHTML = this.labHtml();
     else body.innerHTML = `<div class="settings-grid">${this.settingsHtml()}</div>`;
     this.hydrateIcons(body);
     this.bindPanel(body);
+  }
+
+  missionsHtml() {
+    const d = saveSystem.data;
+    const streak = Math.max(1, d.daily.streak.count);
+    const cyclePos = ((streak - 1) % 7) + 1;
+    const canClaim = saveSystem.canClaimStreak();
+    const days = STREAK_REWARDS.map((r) => {
+      const state = r.day < cyclePos || (r.day === cyclePos && !canClaim) ? 'claimed' : r.day === cyclePos ? 'today' : 'future';
+      return `<div class="sday sday-${state} ${r.skin ? 'sday-big' : ''}">
+        <span class="sday-n">DAY ${r.day}</span>
+        <span class="sday-r">${iconSvg(state === 'claimed' ? 'check' : 'flux', 13)}${r.flux}</span>
+        ${r.skin ? '<span class="sday-skin">+ CHRONO</span>' : ''}
+      </div>`;
+    }).join('');
+    const today = streakReward(streak);
+    const next = streakReward(streak + 1);
+    const ms = msUntilNextDay();
+    const reset = `${Math.floor(ms / 3600000)}h ${String(Math.floor((ms % 3600000) / 60000)).padStart(2, '0')}m`;
+    const list = d.daily.missions.list;
+    const missions = list.map((m) => {
+      const pct = Math.min(1, m.progress / m.target);
+      const timed = /survive|ruins/.test(m.id);
+      return `<div class="mission ${m.done ? 'is-done' : ''}">
+        <span class="mission-tier t${m.tier}">${['EASY', 'MEDIUM', 'HARD'][m.tier]}</span>
+        <span class="mission-label">${missionLabel(m)}</span>
+        <span class="mission-reward">${m.done ? iconSvg('check', 14) + 'DONE' : iconSvg('flux', 13) + m.reward}</span>
+        <div class="progress"><div class="progress-fill" style="width:${pct * 100}%"></div></div>
+        <span class="mission-prog">${timed ? `${formatTime(m.progress)} / ${formatTime(m.target)}` : `${m.progress} / ${m.target}`}</span>
+      </div>`;
+    }).join('');
+    const allDone = list.length > 0 && list.every(m => m.done);
+    const claimSub = `+${today.flux} FLUX${today.skin && !d.unlockedSkins.includes('chrono') ? ' + CHRONO COLORWAY' : ''}`;
+    const head = canClaim
+      ? `<button id="btn-claim" class="cta cta-sm"><span class="cta-main">CLAIM DAY ${cyclePos}</span><span class="cta-sub">${claimSub}</span></button>`
+      : `<div class="streak-next">Come back tomorrow for <b>DAY ${(cyclePos % 7) + 1}: +${next.flux} FLUX${next.skin ? ' + CHRONO' : ''}</b><span>Missing a day resets the streak</span></div>`;
+    return `
+      <div class="streak-head">
+        <div>
+          <span class="kicker">LOGIN STREAK</span>
+          <div class="streak-count">${iconSvg('streak', 22)}<b>${streak}</b>DAY${streak > 1 ? 'S' : ''}</div>
+        </div>
+        ${head}
+      </div>
+      <div class="streak-track">${days}</div>
+      <div class="missions-head">
+        <h3 class="section-label">TODAY'S MISSIONS · ${missionsDone(d.daily)}/${list.length}</h3>
+        <span class="missions-reset">${iconSvg('clock', 13)}New set in ${reset}</span>
+      </div>
+      <div class="mission-list">${missions}</div>
+      <div class="mission-bonus ${allDone ? 'is-done' : ''}">${iconSvg(allDone ? 'check' : 'chest', 16)}<span>Complete all three: <b>+${ALL_MISSIONS_BONUS} Flux bonus</b></span></div>`;
+  }
+
+  onStreakClaimed(reward) {
+    this.renderPanel();
+    this.refreshHub();
+    this.hubToast(reward.skin ? `DAY ${reward.day} · +${reward.flux} FLUX + CHRONO COLORWAY` : `DAY ${reward.day} · +${reward.flux} FLUX`);
+  }
+
+  hubToast(text) {
+    const el = document.createElement('div');
+    el.className = 'hub-toast';
+    el.textContent = text;
+    $('app').appendChild(el);
+    setTimeout(() => el.classList.add('out'), 1800);
+    setTimeout(() => el.remove(), 2300);
   }
 
   loopersHtml() {
@@ -188,12 +286,13 @@ export class UI {
       const owned = d.unlockedSkins.includes(s.id);
       const selected = d.selectedSkin === s.id;
       const color = s.color || getCharacter(d.selectedCharacter).color;
-      const afford = d.flux >= s.cost;
+      const afford = s.cost !== null && d.flux >= s.cost;
+      const price = s.cost === null ? s.exclusive.toUpperCase() : `${iconSvg('flux', 12)}${s.cost}`;
       return `
         <button class="skin-chip ${selected ? 'is-selected' : ''} ${!owned && !afford ? 'is-poor' : ''}" data-skin="${s.id}" style="--c:${color}">
           <span class="skin-dot"></span>
           <span class="skin-name">${s.name}</span>
-          <span class="skin-cost">${owned ? (selected ? 'ON' : '') : `${iconSvg('flux', 12)}${s.cost}`}</span>
+          <span class="skin-cost">${owned ? (selected ? 'ON' : '') : price}</span>
         </button>`;
     }).join('');
 
@@ -256,6 +355,8 @@ export class UI {
       if (saveSystem.buyLab(el.dataset.lab)) audio.playPick();
       this.renderPanel();
     }));
+    const claim = body.querySelector('#btn-claim');
+    if (claim) this.click(claim, () => this.game.claimStreak());
     this.bindSettings(body);
   }
 
@@ -469,7 +570,7 @@ export class UI {
 
   // ---------- RESULTS ----------
 
-  showResults({ summary, flux, newRecords, unlocked, canDouble }) {
+  showResults({ summary, flux, newRecords, unlocked, unlockedStages = [], missions = null, canDouble }) {
     this.hideAll();
     $('screen-results').classList.remove('hidden');
     $('results-kicker').textContent = summary.bossKilled ? 'LOOP BROKEN' : 'LOOP COLLAPSED';
@@ -491,7 +592,28 @@ export class UI {
     $('btn-double').disabled = false;
 
     const d = saveSystem.data;
+    const list = d.daily.missions.list;
+    const rows = [];
+    if (missions) {
+      for (const m of missions.completed) rows.push(`<div class="rm rm-done">${iconSvg('check', 14)}<span>${missionLabel(m)}</span><b>+${m.reward}</b></div>`);
+      if (missions.bonus) rows.push(`<div class="rm rm-done">${iconSvg('chest', 14)}<span>All daily missions complete</span><b>+${missions.bonus}</b></div>`);
+    }
+    const open = list.filter(m => !m.done);
+    if (open.length > 0) {
+      const m = open[0];
+      const timed = /survive|ruins/.test(m.id);
+      rows.push(`<div class="rm">${iconSvg('target', 14)}<span>${missionLabel(m)}</span><em>${timed ? formatTime(m.progress) : m.progress} / ${timed ? formatTime(m.target) : m.target}</em></div>`);
+    } else {
+      const next = streakReward(d.daily.streak.count + 1);
+      rows.push(`<div class="rm rm-tomorrow">${iconSvg('streak', 14)}<span>All done today. New missions tomorrow, plus Day ${(((Math.max(1, d.daily.streak.count)) % 7) + 1)} streak: +${next.flux} Flux</span></div>`);
+    }
+    $('results-missions').innerHTML = `<div class="rm-head">DAILY MISSIONS ${missionsDone(d.daily)}/${list.length}</div>${rows.join('')}`;
+
     const progress = [];
+    for (const id of unlockedStages) {
+      const st = getStage(id);
+      progress.push(`<div class="unlock-banner" style="--c:${st.palette.glow}"><span class="kicker">NEW STAGE UNLOCKED</span><b>${st.name}</b><span>${st.subtitle} · ×${st.fluxMult} Flux</span></div>`);
+    }
     for (const id of unlocked) {
       const c = getCharacter(id);
       progress.push(`<div class="unlock-banner" style="--c:${c.color}"><span class="kicker">NEW LOOPER UNLOCKED</span><b>${c.name}</b><span>${c.trait}</span></div>`);

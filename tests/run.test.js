@@ -6,6 +6,7 @@ import { buildDraft, applyOption, availableEvolution, buildCacheOptions } from '
 import { computeRunFlux } from '../src/systems/Economy.js';
 import { migrateV1, normalizeSave, pickBestSave, createDefaultSave, SaveSystem } from '../src/systems/SaveSystem.js';
 import { WEAPONS } from '../src/data/weapons.js';
+import * as Daily from '../src/systems/DailySystem.js';
 import { CONFIG } from '../src/config.js';
 
 let passed = 0;
@@ -194,8 +195,9 @@ test('flux shown equals flux banked', () => {
   const save = new SaveSystem();
   save.save = () => {};
   const before = save.data.flux;
-  save.recordRun({ ...summary, flux });
-  assert(save.data.flux - before === flux, `banked ${save.data.flux - before}, shown ${flux}`);
+  const { missions } = save.recordRun({ ...summary, flux });
+  const shown = flux + missions.fluxEarned; // results screen shows run Flux plus mission rewards
+  assert(save.data.flux - before === shown, `banked ${save.data.flux - before}, shown ${shown}`);
 });
 test('v1 saves migrate with flux and refunds', () => {
   const v1 = {
@@ -259,6 +261,83 @@ test('3-minute simulated run stays numerically sane', () => {
   assert(run.enemies.every(e => Number.isFinite(e.x) && Number.isFinite(e.hp)), 'enemy state finite');
   assert(run.enemies.length <= CONFIG.RUN.MAX_ENEMIES + 40, 'enemy cap respected');
   assert(run.kills > 0, 'bot killed something');
+});
+
+console.log('\nDaily systems');
+test('login streak grows on consecutive days and resets after a gap', () => {
+  const d = Daily.defaultDaily();
+  Daily.checkIn(d, '2026-03-30');
+  assert(d.streak.count === 1, 'day 1');
+  Daily.checkIn(d, '2026-03-30');
+  assert(d.streak.count === 1, 'same day does not count twice');
+  Daily.checkIn(d, '2026-03-31');
+  Daily.checkIn(d, '2026-04-01');
+  assert(d.streak.count === 3, `month boundary keeps streak (got ${d.streak.count})`);
+  Daily.checkIn(d, '2026-04-03');
+  assert(d.streak.count === 1, 'missing a day resets');
+});
+test('streak reward claims once per day; day 7 grants the exclusive colorway once', () => {
+  const d = Daily.defaultDaily();
+  let last = null;
+  for (let i = 1; i <= 7; i++) {
+    const day = `2026-05-0${i}`;
+    Daily.checkIn(d, day);
+    last = Daily.claimStreak(d, day, []);
+    assert(last && Daily.claimStreak(d, day, []) === null, `claim once on ${day}`);
+  }
+  assert(last.day === 7 && last.skin === 'chrono', 'day 7 gives Chrono');
+  Daily.checkIn(d, '2026-05-14');
+  assert(Daily.claimStreak(d, '2026-05-14', ['chrono']).day === 1, 'restart at day 1');
+});
+test('daily missions are deterministic, distinct and include an easy one', () => {
+  const a = Daily.generateMissions('2026-06-10'), b = Daily.generateMissions('2026-06-10'), c = Daily.generateMissions('2026-06-11');
+  assert(JSON.stringify(a) === JSON.stringify(b), 'same day, same missions');
+  assert(new Set(a.map(m => m.id)).size === 3, 'three distinct missions');
+  assert(a.some(m => m.tier === 0), 'one easy mission');
+  assert(JSON.stringify(a) !== JSON.stringify(c), 'next day differs');
+  for (let i = 1; i <= 28; i++) {
+    const list = Daily.generateMissions(`2026-02-${String(i).padStart(2, '0')}`);
+    assert(!list.some(m => m.id === 'ruins'), 'locked-stage missions never appear before the stage unlocks');
+  }
+});
+test('mission progress: sums across runs, best-of for records, bonus when all done', () => {
+  const d = Daily.defaultDaily();
+  d.missions = { day: 'x', bonusClaimed: false, list: [
+    { id: 'kills', tier: 0, target: 100, reward: 25, progress: 0, done: false },
+    { id: 'survive', tier: 1, target: 120, reward: 45, progress: 0, done: false },
+    { id: 'runs', tier: 2, target: 2, reward: 70, progress: 0, done: false },
+  ] };
+  let r = Daily.applyRun(d, { kills: 60, time: 100 });
+  assert(r.completed.length === 0 && d.missions.list[0].progress === 60, 'partial progress');
+  r = Daily.applyRun(d, { kills: 50, time: 90 });
+  assert(d.missions.list[1].progress === 100, 'best-of keeps the longer run');
+  assert(r.completed.map(m => m.id).sort().join() === 'kills,runs', 'kills and runs complete');
+  r = Daily.applyRun(d, { kills: 0, time: 130 });
+  assert(r.completed.length === 1 && r.bonus > 0 && r.fluxEarned === 45 + r.bonus, 'last mission + all-done bonus');
+  assert(Daily.applyRun(d, { kills: 999, time: 999 }).fluxEarned === 0, 'no double rewards');
+});
+test('Glitch Ruins unlocks from a 7:00 Neon Grid run', () => {
+  const save = new SaveSystem();
+  save.save = () => {};
+  let res = save.recordRun({ time: 300, kills: 1, loopKills: 0, paradoxes: 0, level: 3, bossKilled: false, flux: 0, stageId: 'neon_grid' });
+  assert(res.unlockedStages.length === 0 && !save.selectStage('glitch_ruins'), 'still locked');
+  res = save.recordRun({ time: 421, kills: 1, loopKills: 0, paradoxes: 0, level: 3, bossKilled: false, flux: 0, stageId: 'neon_grid' });
+  assert(res.unlockedStages[0] === 'glitch_ruins' && save.selectStage('glitch_ruins'), 'unlocked and selectable');
+});
+test('rifts telegraph, then damage the player and enemies inside', () => {
+  const run = new Run({ seed: 4, stageId: 'glitch_ruins' });
+  run.stage = { ...run.stage, segments: [{ from: 0, to: 1e9, rate: 0, mix: { drone: 1 } }], events: [] };
+  run.riftTimer = 1e9;
+  const e = run.spawnEnemy('brute', 55, 0); // inside the rift, clear of the player
+  e.speed = 0;
+  e.damage = 0;
+  run.rifts.push({ x: 0, y: 0, r: 80, warn: 0.2, maxWarn: 0.2, life: 0.35 });
+  const hp = run.player.hp;
+  run.update(DT, still);
+  assert(run.player.hp === hp, 'no damage during the warning');
+  for (let i = 0; i < 20; i++) run.update(DT, still);
+  assert(run.player.hp < hp, 'player hit by the strike');
+  assert(e.dead || e.hp < e.maxHp, 'enemy hit by the strike');
 });
 
 console.log('\nRefresh-rate consistency');
